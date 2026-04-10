@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run test
+      - run: npm run build
+
+      - name: Create Gitea Release
+        env:
+          # In Gitea Actions, you can usually use secrets.GITHUB_TOKEN for the default
+          # runner token. If your instance requires a custom token, set secrets.GITEA_TOKEN.
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          INSTANCE_URL=${GITEA_INSTANCE_URL:-$GITHUB_SERVER_URL}
+          API_URL="$INSTANCE_URL/api/v1/repos/$GITHUB_REPOSITORY/releases"
+
+          echo "Creating release $VERSION at $API_URL"
+          curl -sf -X POST \
+            -H "Authorization: token $GITEA_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"tag_name\":\"$VERSION\",\"name\":\"$VERSION\",\"body\":\"See [CHANGELOG.md](CHANGELOG.md) for details.\"}" \
+            "$API_URL"
