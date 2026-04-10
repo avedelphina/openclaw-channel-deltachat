@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { homedir } from "node:os";
 import type { T } from "@deltachat/jsonrpc-client";
 import { DeltaChatClient } from "./deltachat.js";
-import type { DeltaChatConfig } from "./types.js";
+import { validateConfig, type DeltaChatConfig } from "./types.js";
 
 /**
  * Read the agent's display name from IDENTITY.md in the workspace.
@@ -94,7 +94,10 @@ interface ChannelGatewayContext {
         ctx: Record<string, unknown>;
         cfg: OpenClawConfig;
         dispatcherOptions: {
-          deliver: (payload: { text?: string; mediaUrl?: string }, info: { kind: string }) => Promise<void>;
+          deliver: (
+            payload: { text?: string; mediaUrl?: string },
+            info: { kind: string },
+          ) => Promise<void>;
           onError?: (err: unknown, info: { kind: string }) => void;
         };
         replyOptions?: Record<string, unknown>;
@@ -141,12 +144,36 @@ interface ResolvedAccount {
   dataDir: string;
   rpcServerPath: string;
   chatmailServer: string;
+  customChatmailRelay?: {
+    enabled: boolean;
+    url?: string;
+    token?: string;
+  };
   enabled: boolean;
+  dmPolicy?: "open" | "allowlist" | "pairing" | "disabled";
+  allowFrom?: string[];
+  requireMention?: boolean;
 }
 
-function resolveAccountFromConfig(cfg: OpenClawConfig, _accountId?: string | null): ResolvedAccount {
+function resolveAccountFromConfig(
+  cfg: OpenClawConfig,
+  _accountId?: string | null,
+): ResolvedAccount {
   const channels = cfg.channels as Record<string, unknown> | undefined;
   const dc = (channels?.deltachat ?? {}) as Record<string, unknown>;
+
+  // Parse custom chatmail relay config
+  const customRelayRaw = dc.customChatmailRelay as
+    | Record<string, unknown>
+    | undefined;
+  const customChatmailRelay = customRelayRaw?.enabled
+    ? {
+        enabled: true,
+        url: customRelayRaw.url as string | undefined,
+        token: customRelayRaw.token as string | undefined,
+      }
+    : { enabled: false };
+
   return {
     id: "default",
     label: "Delta Chat",
@@ -156,14 +183,23 @@ function resolveAccountFromConfig(cfg: OpenClawConfig, _accountId?: string | nul
     dataDir: (dc.dataDir as string) ?? "~/.openclaw/deltachat-data",
     rpcServerPath: (dc.rpcServerPath as string) ?? "deltachat-rpc-server",
     chatmailServer: (dc.chatmailServer as string) ?? "nine.testrun.org",
+    customChatmailRelay,
     enabled: (dc.enabled as boolean) ?? true,
+    dmPolicy: (dc.dmPolicy as ResolvedAccount["dmPolicy"]) ?? "open",
+    allowFrom: dc.allowFrom as string[] | undefined,
+    requireMention: (dc.requireMention as boolean) ?? false,
   };
 }
 
 /** Shared state for the invite link/QR, readable by the HTTP route. */
-export const inviteState: { inviteLink: string | null; svg: string | null } = {
+export const inviteState: {
+  inviteLink: string | null;
+  svg: string | null;
+  accountType: "chatmail" | "email" | null;
+} = {
   inviteLink: null,
   svg: null,
+  accountType: null,
 };
 
 export function createDeltaChatChannel() {
@@ -214,14 +250,18 @@ export function createDeltaChatChannel() {
       deliveryMode: "direct" as const,
       textChunkLimit: 0,
 
-      sendText: async (ctx: ChannelOutboundContext): Promise<OutboundDeliveryResult> => {
+      sendText: async (
+        ctx: ChannelOutboundContext,
+      ): Promise<OutboundDeliveryResult> => {
         if (!client) throw new Error("Delta Chat client not started");
         const chatId = await client.getChatBySessionKey(ctx.to);
         const msgId = await client.sendText(chatId, ctx.text);
         return { messageId: String(msgId) };
       },
 
-      sendMedia: async (ctx: ChannelOutboundContext & { mediaUrl: string }): Promise<OutboundDeliveryResult> => {
+      sendMedia: async (
+        ctx: ChannelOutboundContext & { mediaUrl: string },
+      ): Promise<OutboundDeliveryResult> => {
         if (!client) throw new Error("Delta Chat client not started");
         const chatId = await client.getChatBySessionKey(ctx.to);
         const msgId = await client.sendFile(chatId, null, ctx.mediaUrl);
@@ -243,7 +283,9 @@ export function createDeltaChatChannel() {
 
         const account = ctx.account;
         const agentName = await resolveAgentName(ctx.cfg);
-        const config: DeltaChatConfig = {
+
+        // Build config object from account
+        const rawConfig: Partial<DeltaChatConfig> = {
           enabled: account.enabled,
           email: account.email,
           password: account.password,
@@ -251,7 +293,21 @@ export function createDeltaChatChannel() {
           dataDir: account.dataDir,
           rpcServerPath: account.rpcServerPath,
           chatmailServer: account.chatmailServer,
+          customChatmailRelay: account.customChatmailRelay,
+          dmPolicy: account.dmPolicy,
+          allowFrom: account.allowFrom,
+          requireMention: account.requireMention,
         };
+
+        // Validate and normalize config
+        let config: DeltaChatConfig;
+        try {
+          config = validateConfig(rawConfig);
+        } catch (err) {
+          const log = ctx.log ?? console;
+          log.error(`Invalid Delta Chat configuration: ${err}`);
+          throw err;
+        }
 
         const log = ctx.log ?? {
           info: (msg: string) => console.log(`[deltachat] ${msg}`),
@@ -269,6 +325,10 @@ export function createDeltaChatChannel() {
         }
 
         log.info(`Started Delta Chat client as "${agentName}"`);
+
+        // Determine account type for invite page
+        const isChatmail = await client.isChatmailAccount();
+        inviteState.accountType = isChatmail ? "chatmail" : "email";
 
         // Generate and publish SecureJoin invite link + QR code
         try {
@@ -301,69 +361,107 @@ export function createDeltaChatChannel() {
 
         // Start event-based message handler
         const currentClient = client;
-        currentClient.startMessageHandler(async (msg: T.Message, chat: T.FullChat) => {
-          if (shouldSkipChat(chat.chatType)) return;
+        currentClient.startMessageHandler(
+          async (msg: T.Message, chat: T.FullChat) => {
+            if (shouldSkipChat(chat.chatType)) return;
 
-          const senderEmail = await currentClient.getContactEmail(msg.fromId);
-          log.info(`Incoming message from ${senderEmail}: "${msg.text.slice(0, 50)}"`);
+            const senderEmail = await currentClient.getContactEmail(msg.fromId);
+            log.info(
+              `Incoming message from ${senderEmail}: "${msg.text.slice(0, 50)}"`,
+            );
 
-          const inbound = buildInboundContext({
-            text: msg.text,
-            senderEmail,
-            chatType: chat.chatType,
-            chatId: msg.chatId,
-            file: msg.file,
-            fileMime: msg.fileMime,
-          });
+            // Check allowFrom if configured
+            if (account.allowFrom && account.allowFrom.length > 0) {
+              const isAllowed = account.allowFrom.includes(senderEmail);
+              if (!isAllowed) {
+                log.warn(
+                  `Rejecting message from unauthorized sender: ${senderEmail}`,
+                );
+                await currentClient.sendText(
+                  msg.chatId,
+                  "Sorry, I'm not configured to chat with you. Ask the owner to add your email to the allowlist.",
+                );
+                return;
+              }
+            }
 
-          if (!ctx.channelRuntime) {
-            log.warn(`No channelRuntime — dropping message from ${senderEmail}`);
-            return;
-          }
+            const inbound = buildInboundContext({
+              text: msg.text,
+              senderEmail,
+              chatType: chat.chatType,
+              chatId: msg.chatId,
+              file: msg.file,
+              fileMime: msg.fileMime,
+            });
 
-          // Build MsgContext for OpenClaw dispatch
-          const isGroup = inbound.chatType === "group";
-          const msgContext: Record<string, unknown> = {
-            Body: inbound.text,
-            From: inbound.senderEmail,
-            SessionKey: inbound.sessionKey,
-            AccountId: ctx.accountId,
-            ChatType: isGroup ? "group" : "direct",
-            Provider: "deltachat",
-            SenderId: inbound.senderEmail,
-            SenderName: inbound.senderEmail,
-            Timestamp: Date.now(),
-          };
+            if (!ctx.channelRuntime) {
+              log.warn(`No channelRuntime — dropping message from ${senderEmail}`);
+              return;
+            }
 
-          // Attach media if present
-          if (inbound.media) {
-            msgContext.MediaPath = inbound.media.path;
-            msgContext.MediaType = inbound.media.mimeType;
-          }
+            // Build MsgContext for OpenClaw dispatch
+            const isGroup = inbound.chatType === "group";
+            const msgContext: Record<string, unknown> = {
+              Body: inbound.text,
+              From: inbound.senderEmail,
+              SessionKey: inbound.sessionKey,
+              AccountId: ctx.accountId,
+              ChatType: isGroup ? "group" : "direct",
+              Provider: "deltachat",
+              SenderId: inbound.senderEmail,
+              SenderName: inbound.senderEmail,
+              Timestamp: Date.now(),
+            };
 
-          // Dispatch AI reply
-          await ctx.channelRuntime.reply.dispatchReplyWithBufferedBlockDispatcher({
-            ctx: ctx.channelRuntime.reply.finalizeInboundContext(msgContext),
-            cfg: ctx.cfg,
-            dispatcherOptions: {
-              deliver: async (payload, _info) => {
-                try {
-                  if (payload.text) {
-                    await currentClient.sendText(inbound.chatId, payload.text);
-                  }
-                  if (payload.mediaUrl) {
-                    await currentClient.sendFile(inbound.chatId, null, payload.mediaUrl);
-                  }
-                } catch (err) {
-                  log.error(`Failed to deliver reply to chat ${inbound.chatId}: ${err}`);
-                }
+            // Add group context if applicable
+            if (isGroup) {
+              msgContext.GroupSubject = chat.name;
+              msgContext.ConversationLabel = chat.name;
+            }
+
+            // Add allowFrom for policy enforcement if configured
+            if (account.allowFrom) {
+              msgContext.OwnerAllowFrom = account.allowFrom;
+            }
+
+            // Attach media if present
+            if (inbound.media) {
+              msgContext.MediaPath = inbound.media.path;
+              msgContext.MediaType = inbound.media.mimeType;
+            }
+
+            // Dispatch AI reply
+            await ctx.channelRuntime.reply.dispatchReplyWithBufferedBlockDispatcher(
+              {
+                ctx: ctx.channelRuntime.reply.finalizeInboundContext(msgContext),
+                cfg: ctx.cfg,
+                dispatcherOptions: {
+                  deliver: async (payload, _info) => {
+                    try {
+                      if (payload.text) {
+                        await currentClient.sendText(inbound.chatId, payload.text);
+                      }
+                      if (payload.mediaUrl) {
+                        await currentClient.sendFile(
+                          inbound.chatId,
+                          null,
+                          payload.mediaUrl,
+                        );
+                      }
+                    } catch (err) {
+                      log.error(
+                        `Failed to deliver reply to chat ${inbound.chatId}: ${err}`,
+                      );
+                    }
+                  },
+                  onError: (err) => {
+                    log.error(`Reply dispatch error: ${err}`);
+                  },
+                },
               },
-              onError: (err) => {
-                log.error(`Reply dispatch error: ${err}`);
-              },
-            },
-          });
-        });
+            );
+          },
+        );
 
         // Block until stopAccount is called — the gateway expects startAccount
         // to stay alive for the lifetime of the account.
@@ -381,11 +479,21 @@ export function createDeltaChatChannel() {
           accountStopped();
           accountStopped = null;
         }
+        // Reset invite state
+        inviteState.inviteLink = null;
+        inviteState.svg = null;
+        inviteState.accountType = null;
       },
     },
 
     groups: {
-      resolveRequireMention: (_params: ChannelGroupContext): boolean | undefined => false,
+      resolveRequireMention: (params: ChannelGroupContext): boolean => {
+        const channels = params.cfg.channels as
+          | Record<string, unknown>
+          | undefined;
+        const dc = (channels?.deltachat ?? {}) as Record<string, unknown>;
+        return (dc.requireMention as boolean) ?? false;
+      },
     },
 
     threading: {

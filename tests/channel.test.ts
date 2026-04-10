@@ -19,6 +19,11 @@ describe("channel", () => {
       expect(shouldSkipChat("OutBroadcast")).toBe(true);
       expect(shouldSkipChat("InBroadcast")).toBe(true);
     });
+
+    it("skips other chat types", () => {
+      expect(shouldSkipChat("Unknown")).toBe(true);
+      expect(shouldSkipChat("")).toBe(true);
+    });
   });
 
   describe("buildInboundContext", () => {
@@ -37,6 +42,7 @@ describe("channel", () => {
       expect(ctx.chatType).toBe("direct");
       expect(ctx.chatId).toBe(10);
       expect(ctx.media).toBeNull();
+      expect(ctx.senderEmail).toBe("alice@example.com");
     });
 
     it("builds context for a group text message", () => {
@@ -81,6 +87,74 @@ describe("channel", () => {
       });
 
       expect(ctx.media).toBeNull();
+    });
+
+    it("sets media to null when only fileMime is present", () => {
+      const ctx = buildInboundContext({
+        text: "Just text",
+        senderEmail: "alice@example.com",
+        chatType: "Single",
+        chatId: 10,
+        file: null,
+        fileMime: "image/jpeg",
+      });
+
+      expect(ctx.media).toBeNull();
+    });
+
+    it("sets media to null when only file is present", () => {
+      const ctx = buildInboundContext({
+        text: "Just text",
+        senderEmail: "alice@example.com",
+        chatType: "Single",
+        chatId: 10,
+        file: "/path/to/file",
+        fileMime: null,
+      });
+
+      expect(ctx.media).toBeNull();
+    });
+
+    it("handles empty text message", () => {
+      const ctx = buildInboundContext({
+        text: "",
+        senderEmail: "alice@example.com",
+        chatType: "Single",
+        chatId: 10,
+        file: null,
+        fileMime: null,
+      });
+
+      expect(ctx.text).toBe("");
+      expect(ctx.sessionKey).toBe("deltachat:dm:alice@example.com");
+    });
+
+    it("handles special characters in sender email", () => {
+      const ctx = buildInboundContext({
+        text: "Hello",
+        senderEmail: "user+tag@example.com",
+        chatType: "Single",
+        chatId: 10,
+        file: null,
+        fileMime: null,
+      });
+
+      expect(ctx.sessionKey).toBe("deltachat:dm:user+tag@example.com");
+      expect(ctx.senderEmail).toBe("user+tag@example.com");
+    });
+
+    it("handles large chat IDs", () => {
+      const ctx = buildInboundContext({
+        text: "Hello",
+        senderEmail: "alice@example.com",
+        chatType: "Group",
+        chatId: 2147483647,
+        file: null,
+        fileMime: null,
+      });
+
+      expect(ctx.sessionKey).toBe("deltachat:group:2147483647");
+      expect(ctx.chatId).toBe(2147483647);
     });
   });
 });

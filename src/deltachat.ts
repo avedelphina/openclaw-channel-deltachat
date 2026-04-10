@@ -2,12 +2,20 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { mkdir } from "node:fs/promises";
-import { StdioDeltaChat, C, type T } from "@deltachat/jsonrpc-client";
+import {
+  StdioDeltaChat,
+  C,
+  type T,
+  type DcEvent,
+} from "@deltachat/jsonrpc-client";
 import type { DeltaChatConfig } from "./types.js";
 
 export type SessionKey =
   | { type: "dm"; email: string }
   | { type: "group"; chatId: number };
+
+/** Event handler type for Delta Chat events */
+export type DeltaChatEventHandler = (event: DcEvent) => void;
 
 export class DeltaChatClient {
   private dc: StdioDeltaChat | null = null;
@@ -65,8 +73,12 @@ export class DeltaChatClient {
 
     // Wait for spawn to succeed or fail before proceeding
     await new Promise<void>((resolve, reject) => {
-      this.server!.on("error", (err) => {
-        reject(new Error(`Failed to spawn ${this.config.rpcServerPath}: ${err.message}`));
+      this.server!.on("error", (err: Error) => {
+        reject(
+          new Error(
+            `Failed to spawn ${this.config.rpcServerPath}: ${err.message}`,
+          ),
+        );
       });
       this.server!.on("spawn", () => {
         resolve();
@@ -75,7 +87,11 @@ export class DeltaChatClient {
 
     this.server.on("exit", (code) => this.handleServerExit(code));
 
-    this.dc = new StdioDeltaChat(this.server.stdin!, this.server.stdout!, true);
+    this.dc = new StdioDeltaChat(
+      this.server.stdin!,
+      this.server.stdout!,
+      true,
+    );
 
     await this.configureAccount();
     await this.dc.rpc.startIo(this.accountId);
@@ -95,7 +111,13 @@ export class DeltaChatClient {
       ]);
     }
 
+    // Stop IO gracefully before closing connection
     if (this.dc) {
+      try {
+        await this.dc.rpc.stopIo(this.accountId);
+      } catch {
+        // Ignore — server may already be gone
+      }
       this.dc.close();
       this.dc = null;
     }
@@ -120,44 +142,53 @@ export class DeltaChatClient {
   ): void {
     if (!this.dc) throw new Error("Client not started");
 
-    this.dc.on("IncomingMsg", async (_accountId: number, { chatId, msgId }: { chatId: number; msgId: number }) => {
-      if (!this.dc || !this.running) return;
+    this.dc.on(
+      "IncomingMsg",
+      async (
+        _accountId: number,
+        { chatId, msgId }: { chatId: number; msgId: number },
+      ) => {
+        if (!this.dc || !this.running) return;
 
-      try {
-        const msg = await this.dc.rpc.getMessage(this.accountId, msgId);
-
-        // Skip system/info messages and self-sent messages
-        if (msg.isInfo || msg.fromId === C.DC_CONTACT_ID_SELF) {
-          await this.dc.rpc.markseenMsgs(this.accountId, [msgId]);
-          return;
-        }
-
-        const chat = await this.dc.rpc.getFullChatById(this.accountId, chatId);
-
-        // Auto-accept contact requests so the bot can reply
-        if (chat.isContactRequest) {
-          await this.dc.rpc.acceptChat(this.accountId, chatId);
-        }
-
-        this.inFlightCount++;
         try {
-          await handler(msg, chat);
-        } catch (err) {
-          console.error("[deltachat] Error handling message:", err);
-        } finally {
-          this.inFlightCount--;
-          if (this.inFlightCount === 0 && this.inFlightResolve) {
-            this.inFlightResolve();
-            this.inFlightResolve = null;
-          }
-        }
+          const msg = await this.dc.rpc.getMessage(this.accountId, msgId);
 
-        await this.dc.rpc.markseenMsgs(this.accountId, [msgId]);
-      } catch (err) {
-        if (!this.running) return;
-        console.error("[deltachat] Error processing incoming message:", err);
-      }
-    });
+          // Skip system/info messages and self-sent messages
+          if (msg.isInfo || msg.fromId === C.DC_CONTACT_ID_SELF) {
+            await this.dc.rpc.markseenMsgs(this.accountId, [msgId]);
+            return;
+          }
+
+          const chat = await this.dc.rpc.getFullChatById(
+            this.accountId,
+            chatId,
+          );
+
+          // Auto-accept contact requests so the bot can reply
+          if (chat.isContactRequest) {
+            await this.dc.rpc.acceptChat(this.accountId, chatId);
+          }
+
+          this.inFlightCount++;
+          try {
+            await handler(msg, chat);
+          } catch (err) {
+            console.error("[deltachat] Error handling message:", err);
+          } finally {
+            this.inFlightCount--;
+            if (this.inFlightCount === 0 && this.inFlightResolve) {
+              this.inFlightResolve();
+              this.inFlightResolve = null;
+            }
+          }
+
+          await this.dc.rpc.markseenMsgs(this.accountId, [msgId]);
+        } catch (err) {
+          if (!this.running) return;
+          console.error("[deltachat] Error processing incoming message:", err);
+        }
+      },
+    );
   }
 
   // --- Sending ---
@@ -189,9 +220,14 @@ export class DeltaChatClient {
 
   // --- Events ---
 
-  onEvent(event: string, handler: (...args: unknown[]) => void): void {
+  onEvent(
+    event: string,
+    handler: (...args: unknown[]) => void,
+  ): void {
     if (!this.dc) throw new Error("Client not started");
-    this.dc.on(event as any, handler as any);
+    // Use type assertion for event handling (the library's types are complex)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.dc as any).on(event, handler);
   }
 
   // --- Queries ---
@@ -258,8 +294,27 @@ export class DeltaChatClient {
    */
   async getSecureJoinInvite(): Promise<{ inviteLink: string; svg: string }> {
     if (!this.dc) throw new Error("Client not started");
-    const [inviteLink, svg] = await this.dc.rpc.getChatSecurejoinQrCodeSvg(this.accountId, null);
+    const [inviteLink, svg] = await this.dc.rpc.getChatSecurejoinQrCodeSvg(
+      this.accountId,
+      null,
+    );
     return { inviteLink, svg };
+  }
+
+  /**
+   * Check if the current account is a chatmail account.
+   */
+  async isChatmailAccount(): Promise<boolean> {
+    if (!this.dc) throw new Error("Client not started");
+    // isChatmail may not be available in all client versions
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rpc = this.dc.rpc as any;
+    if (typeof rpc.isChatmail === "function") {
+      return rpc.isChatmail(this.accountId) as Promise<boolean>;
+    }
+    // Fallback: assume chatmail if using auto-created account without explicit email
+    return !this.config.email || this.config.email === "auto" || 
+           (this.config.customChatmailRelay?.enabled ?? false);
   }
 
   // --- Private ---
@@ -329,10 +384,23 @@ export class DeltaChatClient {
         certificateChecks: null,
         oauth2: null,
       });
+      await this.dc.rpc.configure(this.accountId);
+      const addr = await this.dc.rpc.getConfig(this.accountId, "addr");
+      console.log(`[deltachat] Configured account: ${addr}`);
+    } else if (
+      this.config.customChatmailRelay?.enabled &&
+      this.config.customChatmailRelay.url
+    ) {
+      // Use custom chatmail relay
+      console.log(
+        `[deltachat] Creating account via custom chatmail relay: ${this.config.customChatmailRelay.url}`,
+      );
+      await this.createAccountViaCustomRelay();
     } else {
-      // Auto-create a chatmail account
-      const chatmailUrl = `DCACCOUNT:https://${this.config.chatmailServer}/new`;
-      console.log(`[deltachat] Creating chatmail account on ${this.config.chatmailServer}`);
+      // Auto-create a chatmail account on the default or configured server
+      const server = this.config.chatmailServer;
+      const chatmailUrl = `DCACCOUNT:https://${server}/new`;
+      console.log(`[deltachat] Creating chatmail account on ${server}`);
       await this.dc.rpc.setConfigFromQr(this.accountId, chatmailUrl);
       await this.dc.rpc.batchSetConfig(this.accountId, {
         bot: "1",
@@ -342,6 +410,91 @@ export class DeltaChatClient {
       await this.dc.rpc.configure(this.accountId);
       const addr = await this.dc.rpc.getConfig(this.accountId, "addr");
       console.log(`[deltachat] Created chatmail account: ${addr}`);
+    }
+  }
+
+  /**
+   * Create an account via a custom chatmail relay.
+   * This sends a request to the relay's /new endpoint and configures
+   * the account with the returned credentials.
+   */
+  private async createAccountViaCustomRelay(): Promise<void> {
+    if (!this.dc) throw new Error("Client not started");
+
+    const relay = this.config.customChatmailRelay!;
+    const url = relay.url!;
+
+    // Build the account creation URL with optional token
+    const accountUrl = new URL(url);
+    if (relay.token) {
+      accountUrl.searchParams.set("token", relay.token);
+    }
+
+    try {
+      // Fetch account credentials from the custom relay
+      const response = await fetch(accountUrl.toString(), {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Custom chatmail relay returned ${response.status}: ${errorText}`,
+        );
+      }
+
+      const data = (await response.json()) as {
+        email?: string;
+        password?: string;
+        error?: string;
+      };
+
+      if (data.error) {
+        throw new Error(`Custom chatmail relay error: ${data.error}`);
+      }
+
+      if (!data.email || !data.password) {
+        throw new Error(
+          "Custom chatmail relay did not return email and password",
+        );
+      }
+
+      console.log(
+        `[deltachat] Got account from custom relay: ${data.email}`,
+      );
+
+      // Configure the account with the credentials from the relay
+      await this.dc.rpc.batchSetConfig(this.accountId, {
+        bot: "1",
+        show_emails: "2",
+        displayname: this.config.displayName,
+      });
+      await this.dc.rpc.addOrUpdateTransport(this.accountId, {
+        addr: data.email,
+        password: data.password,
+        imapServer: null,
+        imapPort: null,
+        imapSecurity: null,
+        imapUser: null,
+        smtpServer: null,
+        smtpPort: null,
+        smtpSecurity: null,
+        smtpUser: null,
+        smtpPassword: null,
+        certificateChecks: null,
+        oauth2: null,
+      });
+      await this.dc.rpc.configure(this.accountId);
+
+      console.log(`[deltachat] Configured custom relay account: ${data.email}`);
+    } catch (err) {
+      console.error(
+        `[deltachat] Failed to create account via custom relay: ${err}`,
+      );
+      throw err;
     }
   }
 
