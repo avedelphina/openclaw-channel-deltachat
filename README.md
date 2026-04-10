@@ -86,6 +86,7 @@ On first start, the plugin automatically:
 1. Creates a [chatmail](https://delta.chat/chatmail) account (no email credentials needed)
 2. Generates a SecureJoin invite link and QR code
 3. Reads the agent's display name from `IDENTITY.md` in the workspace
+4. Sets the bot's avatar from `avatar.png`, `avatar.jpg`, or `logo.png` in the workspace (if present)
 
 Open `http://127.0.0.1:18789/deltachat/invite` in your browser to see the QR code. Scan it with Delta Chat to establish an encrypted connection, then start chatting.
 
@@ -186,6 +187,7 @@ Configure how the bot behaves in group chats:
 | `customChatmailRelay` | no | — | Custom chatmail relay config (see below) |
 | `dataDir` | no | `~/.openclaw/deltachat-data` | Delta Chat data directory |
 | `rpcServerPath` | no | `"deltachat-rpc-server"` | Path to rpc-server binary |
+| `avatarPath` | no | — | Path to the bot's avatar image (PNG/JPEG). Falls back to workspace avatar files |
 | `dmPolicy` | no | `"open"` | Direct message policy: `open`, `allowlist`, `pairing`, `disabled` |
 | `allowFrom` | no | — | Array of allowed email addresses (for `allowlist` policy) |
 | `requireMention` | no | `false` | Require @mention in groups for the bot to respond |

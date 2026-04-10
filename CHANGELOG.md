@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented `pairing` and `disabled` DM policies.
   - `pairing`: Only accepts direct messages from verified contacts (via SecureJoin).
   - `disabled`: Rejects all direct messages.
+- Bot avatar support. The plugin auto-detects `avatar.png`, `avatar.jpg`, or `logo.png`
+  in the OpenClaw workspace and sets it as the Delta Chat profile image.
+  An explicit `avatarPath` config option is also available.
 
 ## [0.1.1] - 2026-04-10
 

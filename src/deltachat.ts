@@ -198,6 +198,14 @@ export class DeltaChatClient {
     return this.dc.rpc.miscSendTextMessage(this.accountId, chatId, text);
   }
 
+  async setChatProfileImage(
+    chatId: number,
+    imagePath: string | null,
+  ): Promise<void> {
+    if (!this.dc) throw new Error("Client not started");
+    await this.dc.rpc.setChatProfileImage(this.accountId, chatId, imagePath);
+  }
+
   async sendFile(
     chatId: number,
     text: string | null,
@@ -349,6 +357,7 @@ export class DeltaChatClient {
           bot: "1",
           show_emails: "2",
           displayname: this.config.displayName,
+          selfavatar: this.config.avatarPath ?? null,
         });
         const addr = await this.dc.rpc.getConfig(this.accountId, "addr");
         console.log(`[deltachat] Using existing account: ${addr}`);
@@ -374,6 +383,7 @@ export class DeltaChatClient {
         bot: "1",
         show_emails: "2",
         displayname: this.config.displayName,
+        selfavatar: this.config.avatarPath ?? null,
       });
       await this.dc.rpc.addOrUpdateTransport(this.accountId, {
         addr: this.config.email,
@@ -412,6 +422,7 @@ export class DeltaChatClient {
         bot: "1",
         show_emails: "2",
         displayname: this.config.displayName,
+        selfavatar: this.config.avatarPath ?? null,
       });
       await this.dc.rpc.configure(this.accountId);
       const addr = await this.dc.rpc.getConfig(this.accountId, "addr");
@@ -477,6 +488,7 @@ export class DeltaChatClient {
         bot: "1",
         show_emails: "2",
         displayname: this.config.displayName,
+        selfavatar: this.config.avatarPath ?? null,
       });
       await this.dc.rpc.addOrUpdateTransport(this.accountId, {
         addr: data.email,

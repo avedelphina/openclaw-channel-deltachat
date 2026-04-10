@@ -84,6 +84,7 @@ Delta Chat Client  <-->  Email (IMAP/SMTP)  <-->  deltachat-rpc-server
   - Inbound message handling and context building
   - Access control (allowFrom checking)
   - Group context (subject, mention requirements)
+  - Identity resolution (agent name and avatar from workspace)
 
 - **`src/deltachat.ts`**: DeltaChatClient class that:
   - Spawns `deltachat-rpc-server` as child process
@@ -226,6 +227,7 @@ Located at `~/.openclaw/openclaw.json`:
 | `rpcServerPath` | string | no | `deltachat-rpc-server` | Path to rpc-server binary |
 | `dmPolicy` | string | no | `open` | DM policy: `open`, `allowlist`, `pairing`, `disabled` |
 | `allowFrom` | string[] | no | — | Allowed emails for `allowlist` policy |
+| `avatarPath` | string | no | — | Path to bot avatar image (PNG/JPEG). Falls back to workspace files |
 | `requireMention` | boolean | no | `false` | Require @mention in groups |
 | `enabled` | boolean | no | `true` | Enable/disable the channel |
 
@@ -322,6 +324,7 @@ The invite page adapts based on account type:
 4. **Credentials**: Email passwords stored in OpenClaw config (standard OpenClaw practice)
 5. **Data Directory**: Contains Delta Chat account state (keys, messages) — protect appropriately
 6. **Custom Relay Tokens**: API tokens for custom chatmail relays are stored in config
+7. **Avatar**: Bot avatar is read from `avatarPath` config or auto-discovered from workspace (`avatar.png`, `avatar.jpg`, `logo.png`)
 
 ## Common Development Tasks
 

@@ -1,4 +1,4 @@
-import { writeFile, mkdir, readFile } from "node:fs/promises";
+import { writeFile, mkdir, readFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
 import { homedir } from "node:os";
 import type { T } from "@deltachat/jsonrpc-client";
@@ -6,22 +6,46 @@ import { DeltaChatClient } from "./deltachat.js";
 import { validateConfig, type DeltaChatConfig } from "./types.js";
 
 /**
- * Read the agent's display name from IDENTITY.md in the workspace.
- * Falls back to "OC" if not found.
+ * Read the agent's display name and avatar from the workspace.
+ * Name is read from IDENTITY.md (**Name:** line).
+ * Avatar is resolved from common filenames (avatar.png, avatar.jpg, etc.).
+ * Falls back to name "OC" and no avatar if workspace is missing.
  */
-async function resolveAgentName(cfg: OpenClawConfig): Promise<string> {
+async function resolveAgentIdentity(
+  cfg: OpenClawConfig,
+): Promise<{ name: string; avatarPath?: string }> {
   try {
     const agents = cfg.agents as Record<string, unknown> | undefined;
     const defaults = agents?.defaults as Record<string, unknown> | undefined;
     const workspace = defaults?.workspace as string | undefined;
-    if (!workspace) return "OC";
+    if (!workspace) return { name: "OC" };
 
     const identityPath = resolve(workspace, "IDENTITY.md");
     const content = await readFile(identityPath, "utf-8");
     const match = content.match(/\*\*Name:\*\*\s*(.+)/);
-    return match?.[1]?.trim() || "OC";
+    const name = match?.[1]?.trim() || "OC";
+
+    const avatarCandidates = [
+      "avatar.png",
+      "avatar.jpg",
+      "avatar.jpeg",
+      "logo.png",
+      "logo.jpg",
+      "logo.jpeg",
+    ];
+    for (const candidate of avatarCandidates) {
+      const avatarPath = resolve(workspace, candidate);
+      try {
+        await access(avatarPath);
+        return { name, avatarPath };
+      } catch {
+        // continue to next candidate
+      }
+    }
+
+    return { name };
   } catch {
-    return "OC";
+    return { name: "OC" };
   }
 }
 
@@ -328,14 +352,15 @@ export function createDeltaChatChannel() {
         }
 
         const account = ctx.account;
-        const agentName = await resolveAgentName(ctx.cfg);
+        const agentIdentity = await resolveAgentIdentity(ctx.cfg);
 
         // Build config object from account
         const rawConfig: Partial<DeltaChatConfig> = {
           enabled: account.enabled,
           email: account.email,
           password: account.password,
-          displayName: agentName,
+          displayName: agentIdentity.name,
+          avatarPath: agentIdentity.avatarPath,
           dataDir: account.dataDir,
           rpcServerPath: account.rpcServerPath,
           chatmailServer: account.chatmailServer,
@@ -370,7 +395,7 @@ export function createDeltaChatChannel() {
           return;
         }
 
-        log.info(`Started Delta Chat client as "${agentName}"`);
+        log.info(`Started Delta Chat client as "${agentIdentity.name}"`);
 
         // Determine account type for invite page
         const isChatmail = await client.isChatmailAccount();

@@ -214,6 +214,28 @@ describe("validateConfig", () => {
     expect(config.dmPolicy).toBe("allowlist");
     expect(config.requireMention).toBe(true);
   });
+
+  it("accepts avatarPath", () => {
+    const config = validateConfig({
+      avatarPath: "/path/to/avatar.png",
+    });
+    expect(config.avatarPath).toBe("/path/to/avatar.png");
+  });
+});
+
+describe("DeltaChatClient profile methods", () => {
+  it("setChatProfileImage throws when client is not started", async () => {
+    const client = new DeltaChatClient({
+      enabled: true,
+      displayName: "Test",
+      dataDir: "/tmp/dc-test",
+      rpcServerPath: "deltachat-rpc-server",
+      chatmailServer: "nine.testrun.org",
+    });
+    await expect(
+      client.setChatProfileImage(1, "/path/to/image.png"),
+    ).rejects.toThrow("Client not started");
+  });
 });
 
 describe("DEFAULT_CONFIG", () => {

@@ -56,6 +56,10 @@
         "default": "deltachat-rpc-server",
         "description": "Path to the deltachat-rpc-server binary"
       },
+      "avatarPath": {
+        "type": "string",
+        "description": "Path to the bot's avatar/profile image file (PNG or JPEG). If not set, the plugin looks for avatar.png, avatar.jpg, or logo.png in the workspace"
+      },
       "allowFrom": {
         "type": "array",
         "items": { "type": "string" },

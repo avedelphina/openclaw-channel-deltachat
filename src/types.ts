@@ -28,6 +28,11 @@ export interface DeltaChatConfig {
   password?: string;
   /** Display name shown to contacts */
   displayName: string;
+  /**
+   * Path to the bot's avatar/profile image.
+   * If set, the image will be used as the bot's avatar in Delta Chat.
+   */
+  avatarPath?: string;
   /** Directory for Delta Chat account data */
   dataDir: string;
   /** Path to the deltachat-rpc-server binary */
