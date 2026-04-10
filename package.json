@@ -1,6 +1,6 @@
 {
   "name": "deltachat",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenClaw channel plugin for Delta Chat",
   "type": "module",
   "main": "dist/index.js",
@@ -12,7 +12,9 @@
     "lint": "tsc --noEmit"
   },
   "openclaw": {
-    "extensions": ["./dist/index.js"]
+    "extensions": [
+      "./dist/index.js"
+    ]
   },
   "peerDependencies": {
     "openclaw": "*"

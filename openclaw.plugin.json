@@ -55,7 +55,7 @@
       },
       "allowFrom": {
         "type": "array",
-        "items": { "type": "string", "format": "email" },
+        "items": { "type": "string" },
         "description": "List of allowed email addresses that can interact with the bot. If not set, all users are allowed"
       },
       "requireMention": {
