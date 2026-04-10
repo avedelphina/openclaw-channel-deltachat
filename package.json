@@ -1,10 +1,17 @@
 {
-  "name": "deltachat",
+  "name": "openclaw-channel-deltachat",
   "version": "0.1.1",
   "description": "OpenClaw channel plugin for Delta Chat",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist/",
+    "openclaw.plugin.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -13,6 +20,29 @@
     "release:patch": "node scripts/release.mjs patch",
     "release:minor": "node scripts/release.mjs minor",
     "release:major": "node scripts/release.mjs major"
+  },
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "openclaw-channel",
+    "deltachat",
+    "delta-chat",
+    "chatmail",
+    "autocrypt",
+    "email",
+    "messaging"
+  ],
+  "author": "Tomas Kracmar <tomas.kracmar@cqre.net>",
+  "repository": {
+    "type": "git",
+    "url": "https://git.ocean/avedelphina/deltaclaw.git"
+  },
+  "bugs": {
+    "url": "https://git.ocean/avedelphina/deltaclaw/issues"
+  },
+  "homepage": "https://git.ocean/avedelphina/deltaclaw#readme",
+  "engines": {
+    "node": ">=20"
   },
   "openclaw": {
     "extensions": [

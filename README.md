@@ -4,6 +4,8 @@ An [OpenClaw](https://openclaw.ai) channel plugin that bridges [Delta Chat](http
 
 Users interact with OpenClaw agents via end-to-end encrypted Delta Chat messages.
 
+> **Fork notice:** This project is forked from [`jhayashi/dcbot`](https://github.com/jhayashi/dcbot.git) and adapted into a proper OpenClaw channel plugin with additional features like access control, custom chatmail relays, and ClawHub packaging.
+
 ## Why Delta Chat?
 
 **End-to-end encryption by default** — Autocrypt + OpenPGP, no trust-the-server model.
@@ -54,8 +56,8 @@ openclaw plugins install openclaw-channel-deltachat
 Or from source:
 
 ```bash
-git clone https://github.com/jhayashi/dcbot.git
-cd dcbot
+git clone https://git.ocean/avedelphina/deltaclaw.git
+cd deltaclaw
 npm install && npm run build
 openclaw plugins install -l .
 ```

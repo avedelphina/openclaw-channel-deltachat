@@ -1,5 +1,8 @@
 {
   "id": "deltachat",
+  "name": "Delta Chat",
+  "description": "OpenClaw channel plugin for Delta Chat messaging",
+  "version": "0.1.1",
   "channels": ["deltachat"],
   "configSchema": {
     "type": "object",
