@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { buildInboundContext, shouldSkipChat } from "../src/channel.js";
+import {
+  buildInboundContext,
+  shouldSkipChat,
+  checkDmPolicy,
+} from "../src/channel.js";
 
 describe("channel", () => {
   describe("shouldSkipChat", () => {
@@ -155,6 +159,86 @@ describe("channel", () => {
 
       expect(ctx.sessionKey).toBe("deltachat:group:2147483647");
       expect(ctx.chatId).toBe(2147483647);
+    });
+  });
+
+  describe("checkDmPolicy", () => {
+    it("allows any sender when policy is open", () => {
+      const result = checkDmPolicy({
+        dmPolicy: "open",
+        senderEmail: "anyone@example.com",
+        isVerified: false,
+      });
+      expect(result.allowed).toBe(true);
+    });
+
+    it("disabled blocks all DMs", () => {
+      const result = checkDmPolicy({
+        dmPolicy: "disabled",
+        senderEmail: "anyone@example.com",
+        isVerified: true,
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain("not configured to accept direct messages");
+    });
+
+    it("pairing allows verified contacts", () => {
+      const result = checkDmPolicy({
+        dmPolicy: "pairing",
+        senderEmail: "verified@example.com",
+        isVerified: true,
+      });
+      expect(result.allowed).toBe(true);
+    });
+
+    it("pairing blocks unverified contacts", () => {
+      const result = checkDmPolicy({
+        dmPolicy: "pairing",
+        senderEmail: "unverified@example.com",
+        isVerified: false,
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain("only chat with verified contacts");
+    });
+
+    it("allowlist allows listed emails", () => {
+      const result = checkDmPolicy({
+        dmPolicy: "allowlist",
+        senderEmail: "alice@example.com",
+        allowFrom: ["alice@example.com", "bob@example.com"],
+        isVerified: false,
+      });
+      expect(result.allowed).toBe(true);
+    });
+
+    it("allowlist blocks non-listed emails", () => {
+      const result = checkDmPolicy({
+        dmPolicy: "allowlist",
+        senderEmail: "stranger@example.com",
+        allowFrom: ["alice@example.com"],
+        isVerified: false,
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain("add your email to the allowlist");
+    });
+
+    it("allowlist allows anyone when list is empty", () => {
+      const result = checkDmPolicy({
+        dmPolicy: "allowlist",
+        senderEmail: "anyone@example.com",
+        allowFrom: [],
+        isVerified: false,
+      });
+      expect(result.allowed).toBe(true);
+    });
+
+    it("allowlist allows anyone when allowFrom is undefined", () => {
+      const result = checkDmPolicy({
+        dmPolicy: "allowlist",
+        senderEmail: "anyone@example.com",
+        isVerified: false,
+      });
+      expect(result.allowed).toBe(true);
     });
   });
 });

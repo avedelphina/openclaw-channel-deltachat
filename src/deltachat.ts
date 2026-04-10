@@ -265,6 +265,12 @@ export class DeltaChatClient {
     return contact.address;
   }
 
+  async isContactVerified(contactId: number): Promise<boolean> {
+    if (!this.dc) throw new Error("Client not started");
+    const contact = await this.dc.rpc.getContact(this.accountId, contactId);
+    return contact.isVerified;
+  }
+
   async getChatMembers(
     chatId: number,
   ): Promise<Array<{ email: string; name: string }>> {

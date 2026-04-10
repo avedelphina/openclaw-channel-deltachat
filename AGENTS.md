@@ -259,7 +259,12 @@ The bot's display name is read from `IDENTITY.md` in the OpenClaw workspace (par
    - Listen for `IncomingMsg` events
    - Skip system messages and self-sent messages
    - Auto-accept contact requests
-   - Check `allowFrom` if configured
+   - Check `allowFrom` if configured (applies to all chats)
+   - Enforce `dmPolicy` for direct messages (`Single` chats):
+     - `open`: anyone can DM the bot
+     - `allowlist`: only emails in `allowFrom` can DM
+     - `pairing`: only verified contacts (via SecureJoin/QR) can DM
+     - `disabled`: all DMs are rejected
    - Build inbound context and dispatch to OpenClaw
    - Mark messages as seen after processing
 

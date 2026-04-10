@@ -51,6 +51,52 @@ export function shouldSkipChat(chatType: string): boolean {
   return chatType !== "Single" && chatType !== "Group";
 }
 
+export interface DmPolicyCheckInput {
+  dmPolicy: "open" | "allowlist" | "pairing" | "disabled";
+  senderEmail: string;
+  allowFrom?: string[];
+  isVerified: boolean;
+}
+
+export function checkDmPolicy(input: DmPolicyCheckInput): {
+  allowed: boolean;
+  reason?: string;
+} {
+  switch (input.dmPolicy) {
+    case "disabled":
+      return {
+        allowed: false,
+        reason:
+          "Sorry, I'm not configured to accept direct messages. Please contact me in a verified group or ask the owner for help.",
+      };
+    case "allowlist":
+      if (
+        input.allowFrom &&
+        input.allowFrom.length > 0 &&
+        !input.allowFrom.includes(input.senderEmail)
+      ) {
+        return {
+          allowed: false,
+          reason:
+            "Sorry, I'm not configured to chat with you. Ask the owner to add your email to the allowlist.",
+        };
+      }
+      return { allowed: true };
+    case "pairing":
+      if (!input.isVerified) {
+        return {
+          allowed: false,
+          reason:
+            "Sorry, I only chat with verified contacts. Please scan my QR code or use SecureJoin to establish a verified connection.",
+        };
+      }
+      return { allowed: true };
+    case "open":
+    default:
+      return { allowed: true };
+  }
+}
+
 export function buildInboundContext(input: InboundInput): InboundContext {
   const isGroup = input.chatType === "Group";
 
@@ -380,6 +426,26 @@ export function createDeltaChatChannel() {
                 await currentClient.sendText(
                   msg.chatId,
                   "Sorry, I'm not configured to chat with you. Ask the owner to add your email to the allowlist.",
+                );
+                return;
+              }
+            }
+
+            // Enforce DM policy for direct messages
+            if (chat.chatType === "Single") {
+              const policyCheck = checkDmPolicy({
+                dmPolicy: account.dmPolicy ?? "open",
+                senderEmail,
+                allowFrom: account.allowFrom,
+                isVerified: await currentClient.isContactVerified(msg.fromId),
+              });
+              if (!policyCheck.allowed) {
+                log.warn(
+                  `Rejecting DM from ${senderEmail}: ${policyCheck.reason}`,
+                );
+                await currentClient.sendText(
+                  msg.chatId,
+                  policyCheck.reason!,
                 );
                 return;
               }
