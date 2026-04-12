@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `groupPolicy` and `groupAllowFrom` for group chat access control.
 - Added `sendReadReceipts` toggle to control MDN read receipts for DMs.
 - Added `configWrites` toggle for `/config` command gating.
+- Added verified group creation via `POST /deltachat/groups` and group QR
+  invite endpoints. Group contact requests are now policy-aware: unauthorized
+  group additions trigger `leaveGroup()` automatically.
 
 ## [0.1.1] - 2026-04-10
 

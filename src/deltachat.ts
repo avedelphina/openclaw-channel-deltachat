@@ -164,11 +164,6 @@ export class DeltaChatClient {
             chatId,
           );
 
-          // Auto-accept contact requests so the bot can reply
-          if (chat.isContactRequest) {
-            await this.dc.rpc.acceptChat(this.accountId, chatId);
-          }
-
           this.inFlightCount++;
           try {
             await handler(msg, chat);
@@ -206,6 +201,32 @@ export class DeltaChatClient {
   ): Promise<void> {
     if (!this.dc) throw new Error("Client not started");
     await this.dc.rpc.setChatProfileImage(this.accountId, chatId, imagePath);
+  }
+
+  async createGroupChat(name: string, protect: boolean): Promise<number> {
+    if (!this.dc) throw new Error("Client not started");
+    return this.dc.rpc.createGroupChat(this.accountId, name, protect);
+  }
+
+  async leaveGroup(chatId: number): Promise<void> {
+    if (!this.dc) throw new Error("Client not started");
+    await this.dc.rpc.leaveGroup(this.accountId, chatId);
+  }
+
+  async getGroupSecureJoinInvite(
+    chatId: number,
+  ): Promise<{ inviteLink: string; svg: string }> {
+    if (!this.dc) throw new Error("Client not started");
+    const [inviteLink, svg] = await this.dc.rpc.getChatSecurejoinQrCodeSvg(
+      this.accountId,
+      chatId,
+    );
+    return { inviteLink, svg };
+  }
+
+  async acceptChat(chatId: number): Promise<void> {
+    if (!this.dc) throw new Error("Client not started");
+    await this.dc.rpc.acceptChat(this.accountId, chatId);
   }
 
   async sendFile(

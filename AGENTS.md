@@ -235,6 +235,17 @@ Located at `~/.openclaw/openclaw.json`:
 | `requireMention` | boolean | no | `false` | Require @mention in groups |
 | `enabled` | boolean | no | `true` | Enable/disable the channel |
 
+### Verified Groups
+
+Because chatmail addresses are random and hard to share, the plugin supports creating **verified groups** via SecureJoin QR codes:
+
+- **Create group**: `POST /deltachat/groups` (admin auth)
+- **Get invite**: `GET /deltachat/groups/:groupId/invite`
+- **QR SVG**: `GET /deltachat/groups/:groupId/invite/qr.svg`
+- **Invite link**: `GET /deltachat/groups/:groupId/invite/link`
+
+When a user adds the bot to an existing group, the plugin checks `groupPolicy` before accepting the contact request. If the sender is not allowed, the bot calls `leaveGroup()` automatically.
+
 ### Custom Chatmail Relay
 
 For private/self-hosted chatmail servers:
@@ -354,6 +365,13 @@ The invite page adapts based on account type:
 Changes to inbound message flow should be made in:
 - `src/channel.ts`: `buildInboundContext()`, message handler in `gateway.startAccount()`
 - `src/deltachat.ts`: `startMessageHandler()` for low-level event handling
+
+### Verified Groups
+
+Because chatmail addresses are auto-generated, the plugin supports **verified group creation** via QR code:
+- `POST /deltachat/groups` creates a new protected group and returns a SecureJoin QR code
+- `GET /deltachat/groups/:groupId/invite` retrieves the invite for an existing group
+- When someone adds the bot to a group, `groupPolicy` is enforced before accepting the contact request. Unauthorized additions trigger `leaveGroup()`.
 
 ### Adding New Configuration Options
 

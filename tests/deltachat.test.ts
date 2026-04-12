@@ -262,6 +262,43 @@ describe("DeltaChatClient profile methods", () => {
       client.setChatProfileImage(1, "/path/to/image.png"),
     ).rejects.toThrow("Client not started");
   });
+
+  it("createGroupChat throws when client is not started", async () => {
+    const client = new DeltaChatClient({
+      enabled: true,
+      displayName: "Test",
+      dataDir: "/tmp/dc-test",
+      rpcServerPath: "deltachat-rpc-server",
+      chatmailServer: "nine.testrun.org",
+    });
+    await expect(client.createGroupChat("Test Group", true)).rejects.toThrow(
+      "Client not started",
+    );
+  });
+
+  it("leaveGroup throws when client is not started", async () => {
+    const client = new DeltaChatClient({
+      enabled: true,
+      displayName: "Test",
+      dataDir: "/tmp/dc-test",
+      rpcServerPath: "deltachat-rpc-server",
+      chatmailServer: "nine.testrun.org",
+    });
+    await expect(client.leaveGroup(1)).rejects.toThrow("Client not started");
+  });
+
+  it("getGroupSecureJoinInvite throws when client is not started", async () => {
+    const client = new DeltaChatClient({
+      enabled: true,
+      displayName: "Test",
+      dataDir: "/tmp/dc-test",
+      rpcServerPath: "deltachat-rpc-server",
+      chatmailServer: "nine.testrun.org",
+    });
+    await expect(
+      client.getGroupSecureJoinInvite(1),
+    ).rejects.toThrow("Client not started");
+  });
 });
 
 describe("DEFAULT_CONFIG", () => {

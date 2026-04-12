@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createDeltaChatChannel, inviteState } from "./channel.js";
+import { createDeltaChatChannel, inviteState, runtimeState } from "./channel.js";
 
 /** OpenClaw API interface for plugin registration */
 interface OpenClawAPI {
@@ -22,6 +22,97 @@ interface OpenClawAPI {
 export default function register(api: OpenClawAPI): void {
   const channel = createDeltaChatChannel();
   api.registerChannel(channel);
+
+  // Create a new verified group and return its QR invite
+  api.registerHttpRoute({
+    path: "/deltachat/groups",
+    auth: "admin",
+    match: "prefix",
+    handler: async (
+      req: IncomingMessage,
+      res: ServerResponse,
+    ): Promise<void> => {
+      const dc = runtimeState.client;
+      if (!dc) {
+        res.writeHead(503, { "Content-Type": "text/plain" });
+        res.end("Delta Chat channel not started yet");
+        return;
+      }
+
+      const url = req.url ?? "";
+
+      // POST /deltachat/groups -> create group
+      if (req.method === "POST" && url === "/deltachat/groups") {
+        let body = "";
+        for await (const chunk of req) {
+          body += chunk;
+        }
+        const parsed = JSON.parse(body) as { name?: string };
+        const name = parsed.name ?? "OpenClaw Group";
+
+        try {
+          const groupId = await dc.createGroupChat(name, true);
+          const invite = await dc.getGroupSecureJoinInvite(groupId);
+          res.writeHead(201, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              groupId,
+              name,
+              inviteLink: invite.inviteLink,
+              qrSvg: invite.svg,
+            }),
+          );
+        } catch (err) {
+          res.writeHead(500, { "Content-Type": "text/plain" });
+          res.end(`Failed to create group: ${err}`);
+        }
+        return;
+      }
+
+      // GET /deltachat/groups/:groupId/invite -> get invite
+      const match = url.match(
+        /^\/deltachat\/groups\/([^\/]+)\/invite(?:\/(qr\.svg|link))?$/,
+      );
+      if (match && req.method === "GET") {
+        const groupId = parseInt(match[1]!, 10);
+        if (isNaN(groupId)) {
+          res.writeHead(400, { "Content-Type": "text/plain" });
+          res.end("Invalid group ID");
+          return;
+        }
+
+        try {
+          const invite = await dc.getGroupSecureJoinInvite(groupId);
+          const subpath = match[2];
+          if (subpath === "qr.svg") {
+            res.writeHead(200, { "Content-Type": "image/svg+xml" });
+            res.end(invite.svg);
+            return;
+          }
+          if (subpath === "link") {
+            res.writeHead(200, { "Content-Type": "text/plain" });
+            res.end(invite.inviteLink);
+            return;
+          }
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              groupId,
+              inviteLink: invite.inviteLink,
+              qrSvg: invite.svg,
+            }),
+          );
+        } catch (err) {
+          res.writeHead(500, { "Content-Type": "text/plain" });
+          res.end(`Failed to get group invite: ${err}`);
+        }
+        return;
+      }
+
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Not found");
+    },
+  });
 
   // Serve the SecureJoin invite page on the gateway dashboard
   api.registerHttpRoute({

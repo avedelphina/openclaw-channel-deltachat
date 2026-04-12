@@ -236,6 +236,25 @@ The invite page adapts based on your account type:
 - **Chatmail accounts**: Shows QR code scanning instructions
 - **Regular email accounts**: Shows email-based connection instructions with optional QR code
 
+## Verified Groups
+
+Because chatmail addresses are auto-generated and random, users typically can't add the bot to a group by email address. Instead, the bot can create **verified groups** and share a QR code:
+
+```bash
+# Create a verified group (returns JSON with groupId, inviteLink, qrSvg)
+curl -X POST http://127.0.0.1:18789/deltachat/groups \
+  -H "Content-Type: application/json" \
+  -d '{"name":"My AI Group"}'
+```
+
+Group invite endpoints:
+- `POST /deltachat/groups` — Create a new verified group
+- `GET /deltachat/groups/:groupId/invite` — Get invite JSON
+- `GET /deltachat/groups/:groupId/invite/qr.svg` — Raw QR code SVG
+- `GET /deltachat/groups/:groupId/invite/link` — Plain text invite link
+
+If someone adds the bot to an existing group, the bot enforces `groupPolicy` before joining. Unauthorized additions are automatically declined by leaving the group.
+
 ## How It Works
 
 The plugin spawns `deltachat-rpc-server` as a child process and communicates via JSON-RPC over stdio. When a message arrives, it's dispatched to OpenClaw's agent pipeline via `channelRuntime.reply.dispatchReplyWithBufferedBlockDispatcher()`. Agent responses are sent back as Delta Chat messages.

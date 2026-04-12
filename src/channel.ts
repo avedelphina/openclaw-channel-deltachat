@@ -316,6 +316,13 @@ export const inviteState: {
   accountType: null,
 };
 
+/** Shared access to the active DeltaChatClient for HTTP routes. */
+export const runtimeState: {
+  client: DeltaChatClient | null;
+} = {
+  client: null,
+};
+
 export function createDeltaChatChannel() {
   // Client is created lazily when the gateway starts an account
   let client: DeltaChatClient | null = null;
@@ -435,11 +442,13 @@ export function createDeltaChatChannel() {
         };
 
         client = new DeltaChatClient(config);
+        runtimeState.client = client;
         try {
           await client.start();
         } catch (err) {
           log.error(`Failed to start Delta Chat client: ${err}`);
           client = null;
+          runtimeState.client = null;
           return;
         }
 
@@ -522,6 +531,10 @@ export function createDeltaChatChannel() {
                 );
                 return;
               }
+              // Auto-accept contact requests for allowed DMs
+              if (chat.isContactRequest) {
+                await currentClient.acceptChat(msg.chatId);
+              }
             }
 
             // Enforce group policy for group chats
@@ -535,11 +548,19 @@ export function createDeltaChatChannel() {
                 log.warn(
                   `Rejecting group message from ${senderEmail}: ${policyCheck.reason}`,
                 );
-                await currentClient.sendText(
-                  msg.chatId,
-                  policyCheck.reason!,
-                );
+                if (chat.isContactRequest) {
+                  await currentClient.leaveGroup(msg.chatId);
+                } else {
+                  await currentClient.sendText(
+                    msg.chatId,
+                    policyCheck.reason!,
+                  );
+                }
                 return;
+              }
+              // Auto-accept contact requests for allowed groups
+              if (chat.isContactRequest) {
+                await currentClient.acceptChat(msg.chatId);
               }
             }
 
@@ -632,6 +653,7 @@ export function createDeltaChatChannel() {
         if (client) {
           await client.stop();
           client = null;
+          runtimeState.client = null;
         }
         if (accountStopped) {
           accountStopped();
