@@ -49,6 +49,14 @@ export interface DeltaChatConfig {
   dmPolicy?: "open" | "allowlist" | "pairing" | "disabled";
   /** List of allowed email addresses (for allowlist policy) */
   allowFrom?: string[];
+  /** Group chat policy */
+  groupPolicy?: "open" | "allowlist" | "disabled";
+  /** List of allowed email addresses for group interactions */
+  groupAllowFrom?: string[];
+  /** Send read receipts (MDN) for allowed DMs */
+  sendReadReceipts?: boolean;
+  /** Allow config updates from this channel */
+  configWrites?: boolean;
   /** Require mention in groups to respond */
   requireMention?: boolean;
 }
@@ -63,6 +71,9 @@ export const DEFAULT_CONFIG: Partial<DeltaChatConfig> = {
   rpcServerPath: "deltachat-rpc-server",
   chatmailServer: "nine.testrun.org",
   dmPolicy: "open",
+  groupPolicy: "open",
+  sendReadReceipts: true,
+  configWrites: true,
   requireMention: false,
 };
 
@@ -126,6 +137,18 @@ export function validateConfig(
     for (const email of merged.allowFrom) {
       if (typeof email !== "string" || !email.includes("@")) {
         throw new Error(`Invalid email in allowFrom: ${email}`);
+      }
+    }
+  }
+
+  // Validate groupAllowFrom if provided
+  if (merged.groupAllowFrom) {
+    if (!Array.isArray(merged.groupAllowFrom)) {
+      throw new Error("groupAllowFrom must be an array of email addresses");
+    }
+    for (const email of merged.groupAllowFrom) {
+      if (typeof email !== "string" || !email.includes("@")) {
+        throw new Error(`Invalid email in groupAllowFrom: ${email}`);
       }
     }
   }

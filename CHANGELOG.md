@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bot avatar support. The plugin auto-detects `avatar.png`, `avatar.jpg`, or `logo.png`
   in the OpenClaw workspace and sets it as the Delta Chat profile image.
   An explicit `avatarPath` config option is also available.
+- Added `groupPolicy` and `groupAllowFrom` for group chat access control.
+- Added `sendReadReceipts` toggle to control MDN read receipts for DMs.
+- Added `configWrites` toggle for `/config` command gating.
 
 ## [0.1.1] - 2026-04-10
 

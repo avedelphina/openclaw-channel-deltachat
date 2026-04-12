@@ -157,6 +157,23 @@ Available policies:
 - `pairing` — Only verified contacts (via SecureJoin)
 - `disabled` — DMs are disabled
 
+You can also control group chat access with `groupPolicy` and `groupAllowFrom`:
+
+```json
+{
+  "channels": {
+    "deltachat": {
+      "groupPolicy": "allowlist",
+      "groupAllowFrom": ["alice@example.com"]
+    }
+  }
+}
+```
+
+- `open` — Anyone can interact in groups (default)
+- `allowlist` — Only emails in `groupAllowFrom` can trigger the bot in groups
+- `disabled` — Bot ignores all group messages
+
 Unauthorized users will receive a rejection message.
 
 ## Group Chat Settings
@@ -190,6 +207,10 @@ Configure how the bot behaves in group chats:
 | `avatarPath` | no | — | Path to the bot's avatar image (PNG/JPEG). Falls back to workspace avatar files |
 | `dmPolicy` | no | `"open"` | Direct message policy: `open`, `allowlist`, `pairing`, `disabled` |
 | `allowFrom` | no | — | Array of allowed email addresses (for `allowlist` policy) |
+| `groupPolicy` | no | `"open"` | Group chat policy: `open`, `allowlist`, `disabled` |
+| `groupAllowFrom` | no | — | Array of allowed email addresses for group interactions |
+| `sendReadReceipts` | no | `true` | Send read receipts (MDN) for allowed DMs |
+| `configWrites` | no | `true` | Allow `/config` updates from this channel |
 | `requireMention` | no | `false` | Require @mention in groups for the bot to respond |
 | `enabled` | no | `true` | Enable/disable the channel |
 

@@ -221,6 +221,32 @@ describe("validateConfig", () => {
     });
     expect(config.avatarPath).toBe("/path/to/avatar.png");
   });
+
+  it("accepts groupPolicy and groupAllowFrom", () => {
+    const config = validateConfig({
+      groupPolicy: "allowlist",
+      groupAllowFrom: ["alice@example.com"],
+    });
+    expect(config.groupPolicy).toBe("allowlist");
+    expect(config.groupAllowFrom).toEqual(["alice@example.com"]);
+  });
+
+  it("throws when groupAllowFrom contains invalid email", () => {
+    expect(() =>
+      validateConfig({
+        groupAllowFrom: ["alice@example.com", "not-an-email"],
+      }),
+    ).toThrow("Invalid email in groupAllowFrom");
+  });
+
+  it("accepts sendReadReceipts and configWrites", () => {
+    const config = validateConfig({
+      sendReadReceipts: false,
+      configWrites: false,
+    });
+    expect(config.sendReadReceipts).toBe(false);
+    expect(config.configWrites).toBe(false);
+  });
 });
 
 describe("DeltaChatClient profile methods", () => {

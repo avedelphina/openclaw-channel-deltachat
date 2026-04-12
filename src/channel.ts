@@ -121,6 +121,42 @@ export function checkDmPolicy(input: DmPolicyCheckInput): {
   }
 }
 
+export interface GroupPolicyCheckInput {
+  groupPolicy: "open" | "allowlist" | "disabled";
+  senderEmail: string;
+  groupAllowFrom?: string[];
+}
+
+export function checkGroupPolicy(input: GroupPolicyCheckInput): {
+  allowed: boolean;
+  reason?: string;
+} {
+  switch (input.groupPolicy) {
+    case "disabled":
+      return {
+        allowed: false,
+        reason:
+          "Sorry, I'm not configured to respond in group chats. Please contact me via direct message instead.",
+      };
+    case "allowlist":
+      if (
+        input.groupAllowFrom &&
+        input.groupAllowFrom.length > 0 &&
+        !input.groupAllowFrom.includes(input.senderEmail)
+      ) {
+        return {
+          allowed: false,
+          reason:
+            "Sorry, I'm not configured to chat with you in this group. Ask the owner to add your email to the group allowlist.",
+        };
+      }
+      return { allowed: true };
+    case "open":
+    default:
+      return { allowed: true };
+  }
+}
+
 export function buildInboundContext(input: InboundInput): InboundContext {
   const isGroup = input.chatType === "Group";
 
@@ -222,6 +258,10 @@ interface ResolvedAccount {
   enabled: boolean;
   dmPolicy?: "open" | "allowlist" | "pairing" | "disabled";
   allowFrom?: string[];
+  groupPolicy?: "open" | "allowlist" | "disabled";
+  groupAllowFrom?: string[];
+  sendReadReceipts?: boolean;
+  configWrites?: boolean;
   requireMention?: boolean;
 }
 
@@ -257,6 +297,10 @@ function resolveAccountFromConfig(
     enabled: (dc.enabled as boolean) ?? true,
     dmPolicy: (dc.dmPolicy as ResolvedAccount["dmPolicy"]) ?? "open",
     allowFrom: dc.allowFrom as string[] | undefined,
+    groupPolicy: (dc.groupPolicy as ResolvedAccount["groupPolicy"]) ?? "open",
+    groupAllowFrom: dc.groupAllowFrom as string[] | undefined,
+    sendReadReceipts: (dc.sendReadReceipts as boolean) ?? true,
+    configWrites: (dc.configWrites as boolean) ?? true,
     requireMention: (dc.requireMention as boolean) ?? false,
   };
 }
@@ -367,6 +411,10 @@ export function createDeltaChatChannel() {
           customChatmailRelay: account.customChatmailRelay,
           dmPolicy: account.dmPolicy,
           allowFrom: account.allowFrom,
+          groupPolicy: account.groupPolicy,
+          groupAllowFrom: account.groupAllowFrom,
+          sendReadReceipts: account.sendReadReceipts,
+          configWrites: account.configWrites,
           requireMention: account.requireMention,
         };
 
@@ -467,6 +515,25 @@ export function createDeltaChatChannel() {
               if (!policyCheck.allowed) {
                 log.warn(
                   `Rejecting DM from ${senderEmail}: ${policyCheck.reason}`,
+                );
+                await currentClient.sendText(
+                  msg.chatId,
+                  policyCheck.reason!,
+                );
+                return;
+              }
+            }
+
+            // Enforce group policy for group chats
+            if (chat.chatType === "Group") {
+              const policyCheck = checkGroupPolicy({
+                groupPolicy: account.groupPolicy ?? "open",
+                senderEmail,
+                groupAllowFrom: account.groupAllowFrom,
+              });
+              if (!policyCheck.allowed) {
+                log.warn(
+                  `Rejecting group message from ${senderEmail}: ${policyCheck.reason}`,
                 );
                 await currentClient.sendText(
                   msg.chatId,

@@ -227,6 +227,10 @@ Located at `~/.openclaw/openclaw.json`:
 | `rpcServerPath` | string | no | `deltachat-rpc-server` | Path to rpc-server binary |
 | `dmPolicy` | string | no | `open` | DM policy: `open`, `allowlist`, `pairing`, `disabled` |
 | `allowFrom` | string[] | no | — | Allowed emails for `allowlist` policy |
+| `groupPolicy` | string | no | `open` | Group policy: `open`, `allowlist`, `disabled` |
+| `groupAllowFrom` | string[] | no | — | Allowed emails for group `allowlist` policy |
+| `sendReadReceipts` | boolean | no | `true` | Send MDN read receipts for allowed DMs |
+| `configWrites` | boolean | no | `true` | Allow `/config` commands from this channel |
 | `avatarPath` | string | no | — | Path to bot avatar image (PNG/JPEG). Falls back to workspace files |
 | `requireMention` | boolean | no | `false` | Require @mention in groups |
 | `enabled` | boolean | no | `true` | Enable/disable the channel |
@@ -267,8 +271,12 @@ The bot's display name is read from `IDENTITY.md` in the OpenClaw workspace (par
      - `allowlist`: only emails in `allowFrom` can DM
      - `pairing`: only verified contacts (via SecureJoin/QR) can DM
      - `disabled`: all DMs are rejected
+   - Enforce `groupPolicy` for group chats (`Group` chats):
+     - `open`: anyone can interact in groups
+     - `allowlist`: only emails in `groupAllowFrom` can trigger the bot
+     - `disabled`: all group messages are ignored
    - Build inbound context and dispatch to OpenClaw
-   - Mark messages as seen after processing
+   - Mark messages as seen after processing (skipped when `sendReadReceipts` is false)
 
 3. **Stop**: `gateway.stopAccount()`
    - Wait for in-flight dispatches (up to 10s)
@@ -320,11 +328,13 @@ The invite page adapts based on account type:
 
 1. **Encryption**: All messages are end-to-end encrypted by Delta Chat
 2. **Authentication**: Uses Delta Chat's SecureJoin protocol for verified connections
-3. **Access Control**: Configurable via `dmPolicy` and `allowFrom` options
-4. **Credentials**: Email passwords stored in OpenClaw config (standard OpenClaw practice)
-5. **Data Directory**: Contains Delta Chat account state (keys, messages) — protect appropriately
-6. **Custom Relay Tokens**: API tokens for custom chatmail relays are stored in config
-7. **Avatar**: Bot avatar is read from `avatarPath` config or auto-discovered from workspace (`avatar.png`, `avatar.jpg`, `logo.png`)
+3. **Access Control**: Configurable via `dmPolicy`, `allowFrom`, `groupPolicy`, and `groupAllowFrom`
+4. **Read Receipts**: Controlled by `sendReadReceipts` (sends MDN for allowed DMs when true)
+5. **Config Writes**: Controlled by `configWrites` (allows `/config` commands from the channel)
+6. **Credentials**: Email passwords stored in OpenClaw config (standard OpenClaw practice)
+7. **Data Directory**: Contains Delta Chat account state (keys, messages) — protect appropriately
+8. **Custom Relay Tokens**: API tokens for custom chatmail relays are stored in config
+9. **Avatar**: Bot avatar is read from `avatarPath` config or auto-discovered from workspace (`avatar.png`, `avatar.jpg`, `logo.png`)
 
 ## Common Development Tasks
 

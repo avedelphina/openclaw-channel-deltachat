@@ -3,6 +3,7 @@ import {
   buildInboundContext,
   shouldSkipChat,
   checkDmPolicy,
+  checkGroupPolicy,
 } from "../src/channel.js";
 
 describe("channel", () => {
@@ -237,6 +238,61 @@ describe("channel", () => {
         dmPolicy: "allowlist",
         senderEmail: "anyone@example.com",
         isVerified: false,
+      });
+      expect(result.allowed).toBe(true);
+    });
+  });
+
+  describe("checkGroupPolicy", () => {
+    it("allows any sender when policy is open", () => {
+      const result = checkGroupPolicy({
+        groupPolicy: "open",
+        senderEmail: "anyone@example.com",
+      });
+      expect(result.allowed).toBe(true);
+    });
+
+    it("disabled blocks all group messages", () => {
+      const result = checkGroupPolicy({
+        groupPolicy: "disabled",
+        senderEmail: "anyone@example.com",
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain("not configured to respond in group chats");
+    });
+
+    it("allowlist allows listed emails", () => {
+      const result = checkGroupPolicy({
+        groupPolicy: "allowlist",
+        senderEmail: "alice@example.com",
+        groupAllowFrom: ["alice@example.com", "bob@example.com"],
+      });
+      expect(result.allowed).toBe(true);
+    });
+
+    it("allowlist blocks non-listed emails", () => {
+      const result = checkGroupPolicy({
+        groupPolicy: "allowlist",
+        senderEmail: "stranger@example.com",
+        groupAllowFrom: ["alice@example.com"],
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain("group allowlist");
+    });
+
+    it("allowlist allows anyone when list is empty", () => {
+      const result = checkGroupPolicy({
+        groupPolicy: "allowlist",
+        senderEmail: "anyone@example.com",
+        groupAllowFrom: [],
+      });
+      expect(result.allowed).toBe(true);
+    });
+
+    it("allowlist allows anyone when groupAllowFrom is undefined", () => {
+      const result = checkGroupPolicy({
+        groupPolicy: "allowlist",
+        senderEmail: "anyone@example.com",
       });
       expect(result.allowed).toBe(true);
     });

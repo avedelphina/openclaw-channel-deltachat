@@ -182,7 +182,9 @@ export class DeltaChatClient {
             }
           }
 
-          await this.dc.rpc.markseenMsgs(this.accountId, [msgId]);
+          if (this.config.sendReadReceipts !== false) {
+            await this.dc.rpc.markseenMsgs(this.accountId, [msgId]);
+          }
         } catch (err) {
           if (!this.running) return;
           console.error("[deltachat] Error processing incoming message:", err);

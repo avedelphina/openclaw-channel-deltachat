@@ -75,6 +75,27 @@
         "enum": ["open", "allowlist", "pairing", "disabled"],
         "default": "open",
         "description": "Direct message policy: open (anyone), allowlist (allowFrom only), pairing (verified contacts), disabled"
+      },
+      "groupPolicy": {
+        "type": "string",
+        "enum": ["open", "allowlist", "disabled"],
+        "default": "open",
+        "description": "Group chat policy: open (anyone), allowlist (groupAllowFrom only), disabled"
+      },
+      "groupAllowFrom": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "List of allowed email addresses that can interact in groups. If not set, all users are allowed"
+      },
+      "sendReadReceipts": {
+        "type": "boolean",
+        "default": true,
+        "description": "Send read receipts (MDN) for direct messages from allowed senders"
+      },
+      "configWrites": {
+        "type": "boolean",
+        "default": true,
+        "description": "Allow config updates triggered by /config commands from this channel"
       }
     }
   }
