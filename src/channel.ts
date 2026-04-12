@@ -402,8 +402,20 @@ export function createDeltaChatChannel() {
           accountStopped = null;
         }
 
+        const log = ctx.log ?? {
+          info: (msg: string) => console.log(`[deltachat] ${msg}`),
+          warn: (msg: string) => console.warn(`[deltachat] ${msg}`),
+          error: (msg: string) => console.error(`[deltachat] ${msg}`),
+        };
+
         const account = ctx.account;
         const agentIdentity = await resolveAgentIdentity(ctx.cfg);
+        log.info(`Resolved agent name: ${agentIdentity.name}`);
+        if (agentIdentity.avatarPath) {
+          log.info(`Resolved agent avatar: ${agentIdentity.avatarPath}`);
+        } else {
+          log.warn("No agent avatar found in workspace (looked for avatar.png, avatar.jpg, logo.png)");
+        }
 
         // Build config object from account
         const rawConfig: Partial<DeltaChatConfig> = {
@@ -430,16 +442,9 @@ export function createDeltaChatChannel() {
         try {
           config = validateConfig(rawConfig);
         } catch (err) {
-          const log = ctx.log ?? console;
           log.error(`Invalid Delta Chat configuration: ${err}`);
           throw err;
         }
-
-        const log = ctx.log ?? {
-          info: (msg: string) => console.log(`[deltachat] ${msg}`),
-          warn: (msg: string) => console.warn(`[deltachat] ${msg}`),
-          error: (msg: string) => console.error(`[deltachat] ${msg}`),
-        };
 
         client = new DeltaChatClient(config);
         runtimeState.client = client;

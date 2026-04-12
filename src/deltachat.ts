@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { mkdir } from "node:fs/promises";
+import { mkdir, access } from "node:fs/promises";
 import {
   StdioDeltaChat,
   C,
@@ -364,6 +364,21 @@ export class DeltaChatClient {
     return resolve(dir);
   }
 
+  private resolveAvatarPath(): string | null {
+    if (!this.config.avatarPath) return null;
+    let path = this.config.avatarPath;
+    if (path.startsWith("~")) {
+      path = path.replace("~", homedir());
+    }
+    path = resolve(path);
+    // Validate file exists (async check can't run in sync context, so we do
+    // a fire-and-forget warning)
+    access(path).catch(() => {
+      console.warn(`[deltachat] Avatar file not found or unreadable: ${path}`);
+    });
+    return path;
+  }
+
   private async configureAccount(): Promise<void> {
     if (!this.dc) throw new Error("Client not started");
 
@@ -376,14 +391,18 @@ export class DeltaChatClient {
       const isConfigured = await this.dc.rpc.isConfigured(this.accountId);
       if (isConfigured) {
         // Just update display name and bot settings
+        const avatarPath = this.resolveAvatarPath();
         await this.dc.rpc.batchSetConfig(this.accountId, {
           bot: "1",
           show_emails: "2",
           displayname: this.config.displayName,
-          selfavatar: this.config.avatarPath ?? null,
+          selfavatar: avatarPath,
         });
         const addr = await this.dc.rpc.getConfig(this.accountId, "addr");
         console.log(`[deltachat] Using existing account: ${addr}`);
+        if (avatarPath) {
+          console.log(`[deltachat] Avatar set to: ${avatarPath}`);
+        }
         return;
       }
 
@@ -402,11 +421,12 @@ export class DeltaChatClient {
     if (this.config.email && this.config.password) {
       // Use explicit credentials (e.g. for a regular IMAP account)
       console.log(`[deltachat] Configuring account with ${this.config.email}`);
+      const avatarPathExplicit = this.resolveAvatarPath();
       await this.dc.rpc.batchSetConfig(this.accountId, {
         bot: "1",
         show_emails: "2",
         displayname: this.config.displayName,
-        selfavatar: this.config.avatarPath ?? null,
+        selfavatar: avatarPathExplicit,
       });
       await this.dc.rpc.addOrUpdateTransport(this.accountId, {
         addr: this.config.email,
@@ -441,15 +461,19 @@ export class DeltaChatClient {
       const chatmailUrl = `DCACCOUNT:https://${server}/new`;
       console.log(`[deltachat] Creating chatmail account on ${server}`);
       await this.dc.rpc.setConfigFromQr(this.accountId, chatmailUrl);
+      const avatarPathChatmail = this.resolveAvatarPath();
       await this.dc.rpc.batchSetConfig(this.accountId, {
         bot: "1",
         show_emails: "2",
         displayname: this.config.displayName,
-        selfavatar: this.config.avatarPath ?? null,
+        selfavatar: avatarPathChatmail,
       });
       await this.dc.rpc.configure(this.accountId);
       const addr = await this.dc.rpc.getConfig(this.accountId, "addr");
       console.log(`[deltachat] Created chatmail account: ${addr}`);
+      if (avatarPathChatmail) {
+        console.log(`[deltachat] Avatar set to: ${avatarPathChatmail}`);
+      }
     }
   }
 
@@ -507,11 +531,12 @@ export class DeltaChatClient {
       );
 
       // Configure the account with the credentials from the relay
+      const avatarPathRelay = this.resolveAvatarPath();
       await this.dc.rpc.batchSetConfig(this.accountId, {
         bot: "1",
         show_emails: "2",
         displayname: this.config.displayName,
-        selfavatar: this.config.avatarPath ?? null,
+        selfavatar: avatarPathRelay,
       });
       await this.dc.rpc.addOrUpdateTransport(this.accountId, {
         addr: data.email,
