@@ -1,6 +1,6 @@
 {
   "name": "openclaw-channel-deltachat",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "OpenClaw channel plugin for Delta Chat",
   "type": "module",
   "main": "dist/index.js",
