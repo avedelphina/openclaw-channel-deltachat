@@ -164,6 +164,12 @@ export class DeltaChatClient {
             chatId,
           );
 
+          // Mark as seen immediately so the user knows the bot is alive,
+          // even if the AI reply takes a while to generate.
+          if (this.config.sendReadReceipts !== false) {
+            await this.dc.rpc.markseenMsgs(this.accountId, [msgId]);
+          }
+
           this.inFlightCount++;
           try {
             await handler(msg, chat);
@@ -175,10 +181,6 @@ export class DeltaChatClient {
               this.inFlightResolve();
               this.inFlightResolve = null;
             }
-          }
-
-          if (this.config.sendReadReceipts !== false) {
-            await this.dc.rpc.markseenMsgs(this.accountId, [msgId]);
           }
         } catch (err) {
           if (!this.running) return;
