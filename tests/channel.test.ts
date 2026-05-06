@@ -4,6 +4,7 @@ import {
   shouldSkipChat,
   checkDmPolicy,
   checkGroupPolicy,
+  splitMessage,
 } from "../src/channel.js";
 
 describe("channel", () => {
@@ -295,6 +296,75 @@ describe("channel", () => {
         senderEmail: "anyone@example.com",
       });
       expect(result.allowed).toBe(true);
+    });
+  });
+
+  describe("splitMessage", () => {
+    it("returns a single part for short text", () => {
+      const text = "Hello, world!";
+      const parts = splitMessage(text, 100);
+      expect(parts).toEqual([text]);
+    });
+
+    it("splits at paragraph boundaries when possible", () => {
+      const para1 = "a".repeat(100);
+      const para2 = "b".repeat(100);
+      const para3 = "c".repeat(100);
+      const text = `${para1}\n\n${para2}\n\n${para3}`;
+      const parts = splitMessage(text, 250);
+      expect(parts.length).toBe(2);
+      // Finds the last paragraph break before 250, which is between para2 and para3
+      expect(parts[0]).toBe(`${para1}\n\n${para2}`);
+      expect(parts[1]).toBe(para3);
+    });
+
+    it("splits at line boundaries when paragraphs are too far", () => {
+      const line1 = "a".repeat(100);
+      const line2 = "b".repeat(100);
+      const line3 = "c".repeat(100);
+      const text = `${line1}\n${line2}\n${line3}`;
+      const parts = splitMessage(text, 250);
+      expect(parts.length).toBe(2);
+      // Finds the last line break before 250, which is between line2 and line3
+      expect(parts[0]).toBe(`${line1}\n${line2}`);
+      expect(parts[1]).toBe(line3);
+    });
+
+    it("splits at sentence boundaries when lines are too far", () => {
+      const s1 = "First sentence here. ";
+      const s2 = "Second sentence here. ";
+      const s3 = "Third sentence here.";
+      const text = s1 + s2 + s3;
+      const parts = splitMessage(text, 45);
+      expect(parts.length).toBe(2);
+      // Finds the last sentence end before 45, which is after s2
+      expect(parts[0]).toBe("First sentence here. Second sentence here.");
+      expect(parts[1]).toBe("Third sentence here.");
+    });
+
+    it("splits at word boundaries when sentences are too far", () => {
+      const text = "one two three four five six";
+      const parts = splitMessage(text, 15);
+      expect(parts.length).toBe(2);
+      expect(parts[0]).toBe("one two three");
+      expect(parts[1]).toBe("four five six");
+    });
+
+    it("hard splits when no natural boundary exists", () => {
+      const text = "abcdefghijklmnopqrstuvwxyz";
+      const parts = splitMessage(text, 10);
+      expect(parts.length).toBe(3);
+      expect(parts[0]).toBe("abcdefghij");
+      expect(parts[1]).toBe("klmnopqrst");
+      expect(parts[2]).toBe("uvwxyz");
+    });
+
+    it("uses the default 3600 limit", () => {
+      const text = "x".repeat(4000);
+      const parts = splitMessage(text);
+      expect(parts.length).toBe(2);
+      expect(parts[0].length).toBeLessThanOrEqual(3600);
+      expect(parts[1].length).toBeLessThanOrEqual(3600);
     });
   });
 });

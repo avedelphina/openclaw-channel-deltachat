@@ -369,6 +369,70 @@ export const runtimeState: {
   client: null,
 };
 
+/** Delta Chat truncates messages at ~3800 chars with a "Show more" button.
+ *  We split at 3600 to stay comfortably under that limit.
+ */
+const DC_MESSAGE_MAX_LEN = 3600;
+
+/** Split long text into parts that fit under Delta Chat's truncation limit.
+ *  Prefers paragraph boundaries, then line breaks, then sentence ends,
+ *  then word boundaries. Falls back to hard split if nothing works.
+ */
+export function splitMessage(text: string, maxLen = DC_MESSAGE_MAX_LEN): string[] {
+  if (text.length <= maxLen) return [text];
+
+  const parts: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > maxLen) {
+    let splitAt = -1;
+
+    // 1. Prefer paragraph breaks (double newline)
+    const paraIdx = remaining.lastIndexOf("\n\n", maxLen);
+    if (paraIdx > maxLen * 0.5) {
+      splitAt = paraIdx;
+    }
+
+    // 2. Try single line breaks
+    if (splitAt === -1) {
+      const lineIdx = remaining.lastIndexOf("\n", maxLen);
+      if (lineIdx > maxLen * 0.5) {
+        splitAt = lineIdx;
+      }
+    }
+
+    // 3. Try sentence ends (period + space)
+    if (splitAt === -1) {
+      const sentenceIdx = remaining.lastIndexOf(". ", maxLen);
+      if (sentenceIdx > maxLen * 0.5) {
+        splitAt = sentenceIdx + 1; // keep the period on the first part
+      }
+    }
+
+    // 4. Try word boundaries
+    if (splitAt === -1) {
+      const spaceIdx = remaining.lastIndexOf(" ", maxLen);
+      if (spaceIdx > maxLen * 0.5) {
+        splitAt = spaceIdx;
+      }
+    }
+
+    // 5. Hard split as last resort
+    if (splitAt === -1) {
+      splitAt = maxLen;
+    }
+
+    parts.push(remaining.slice(0, splitAt).trimEnd());
+    remaining = remaining.slice(splitAt).trimStart();
+  }
+
+  if (remaining.length > 0) {
+    parts.push(remaining);
+  }
+
+  return parts;
+}
+
 export function createDeltaChatChannel() {
   // Client is created lazily when the gateway starts an account
   let client: DeltaChatClient | null = null;
@@ -424,8 +488,13 @@ export function createDeltaChatChannel() {
       ): Promise<OutboundDeliveryResult> => {
         if (!client) throw new Error("Delta Chat client not started");
         const chatId = await client.getChatBySessionKey(ctx.to);
-        const msgId = await client.sendText(chatId, ctx.text);
-        return { messageId: String(msgId) };
+        const chunks = splitMessage(ctx.text);
+        let firstMsgId: number | undefined;
+        for (const chunk of chunks) {
+          const msgId = await client.sendText(chatId, chunk);
+          if (firstMsgId === undefined) firstMsgId = msgId;
+        }
+        return { messageId: firstMsgId !== undefined ? String(firstMsgId) : undefined };
       },
 
       sendMedia: async (
@@ -675,7 +744,10 @@ export function createDeltaChatChannel() {
                   deliver: async (payload, _info) => {
                     try {
                       if (payload.text) {
-                        await currentClient.sendText(inbound.chatId, payload.text);
+                        const chunks = splitMessage(payload.text);
+                        for (const chunk of chunks) {
+                          await currentClient.sendText(inbound.chatId, chunk);
+                        }
                       }
                       if (payload.mediaUrl) {
                         await currentClient.sendFile(
