@@ -2,7 +2,7 @@
   "id": "deltachat",
   "name": "Delta Chat",
   "description": "OpenClaw channel plugin for Delta Chat messaging",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "channels": ["deltachat"],
   "configSchema": {
     "type": "object",

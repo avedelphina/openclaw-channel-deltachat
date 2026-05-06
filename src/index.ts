@@ -66,26 +66,12 @@ export default function register(api: OpenClawAPI): void {
               margin: 2,
               errorCorrectionLevel: "L",
             });
-            const lines = qr
-              .trimEnd()
-              .split("\n")
-              .filter((l) => l.length > 0);
-            const width = lines[0]?.length ?? 0;
-            const reset = "\x1b[0m";
-            const pad = "  ";
-            const top = `${pad}╭${"─".repeat(width + 2)}╮`;
-            const bottom = `${pad}╰${"─".repeat(width + 2)}╯`;
-
             ctx.logger.info("");
             ctx.logger.info("Scan this QR code with Delta Chat:");
             // eslint-disable-next-line no-console
-            console.log(top);
-            for (const line of lines) {
-              // eslint-disable-next-line no-console
-              console.log(`${pad}│${reset} ${line} ${reset}│`);
-            }
+            console.log("");
             // eslint-disable-next-line no-console
-            console.log(bottom);
+            console.log(qr);
             // eslint-disable-next-line no-console
             console.log("");
           } catch {
