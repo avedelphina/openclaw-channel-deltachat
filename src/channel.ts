@@ -704,6 +704,17 @@ export function createDeltaChatChannel() {
       },
     },
 
+    status: {
+      buildAccountSnapshot: () => ({
+        accountId: "default",
+        name: "Delta Chat",
+        configured: !!inviteState.inviteLink,
+        running: !!inviteState.inviteLink,
+        connected: !!inviteState.inviteLink,
+        inviteLink: inviteState.inviteLink ?? undefined,
+      }),
+    },
+
     groups: {
       resolveRequireMention: (params: ChannelGroupContext): boolean => {
         const channels = params.cfg.channels as

@@ -13,6 +13,19 @@ interface OpenClawAPI {
       res: ServerResponse,
     ) => Promise<void> | void;
   }) => void;
+  registerCli: (
+    registrar: (ctx: {
+      program: {
+        command: (name: string) => {
+          description: (desc: string) => {
+            action: (fn: () => void | Promise<void>) => void;
+          };
+        };
+      };
+      logger: { info: (msg: string) => void; error: (msg: string) => void };
+    }) => void,
+    opts?: { commands?: string[] },
+  ) => void;
 }
 
 /**
@@ -22,6 +35,31 @@ interface OpenClawAPI {
 export default function register(api: OpenClawAPI): void {
   const channel = createDeltaChatChannel();
   api.registerChannel(channel);
+
+  // CLI command to show Delta Chat invite link / QR code
+  api.registerCli(
+    (ctx) => {
+      ctx.program
+        .command("deltachat-invite")
+        .description("Show the Delta Chat SecureJoin invite link and QR code path")
+        .action(() => {
+          if (!inviteState.inviteLink) {
+            ctx.logger.error(
+              "Delta Chat channel not started yet. Start the gateway to generate the invite.",
+            );
+            return;
+          }
+          ctx.logger.info(`Invite link: ${inviteState.inviteLink}`);
+          ctx.logger.info(
+            `QR code SVG:  ${inviteState.svg ? "generated (available via /deltachat/invite/qr.svg)" : "not available"}`,
+          );
+          ctx.logger.info(
+            `HTML invite page: http://<gateway>/deltachat/invite`,
+          );
+        });
+    },
+    { commands: ["deltachat-invite"] },
+  );
 
   // Create a new verified group and return its QR invite
   api.registerHttpRoute({

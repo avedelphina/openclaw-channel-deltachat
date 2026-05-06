@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-05-06
+
+### Fixed
+
+- Emptied `configSchema` in `openclaw.plugin.json` to match the standard external
+  plugin pattern. The OpenClaw Control UI form renderer cannot reliably handle
+  rich JSON schemas from external plugin manifests; an empty schema eliminates
+  the "Unsupported type: . Use Raw mode." error completely.
+
+### Added
+
+- Added `status.buildAccountSnapshot()` adapter so the invite link appears in
+  gateway status snapshots.
+- Added CLI command `openclaw deltachat-invite` that prints the SecureJoin
+  invite link, QR code availability, and HTML invite page URL.
+
 ## [0.1.3] - 2026-05-06
 
 ### Fixed
