@@ -63,10 +63,31 @@ export default function register(api: OpenClawAPI): void {
             const qr = await QRCode.toString(state.inviteLink, {
               type: "terminal",
               small: true,
+              margin: 2,
+              errorCorrectionLevel: "L",
             });
+            const lines = qr
+              .trimEnd()
+              .split("\n")
+              .filter((l) => l.length > 0);
+            const width = lines[0]?.length ?? 0;
+            const reset = "\x1b[0m";
+            const pad = "  ";
+            const top = `${pad}╭${"─".repeat(width + 2)}╮`;
+            const bottom = `${pad}╰${"─".repeat(width + 2)}╯`;
+
+            ctx.logger.info("");
             ctx.logger.info("Scan this QR code with Delta Chat:");
             // eslint-disable-next-line no-console
-            console.log(qr);
+            console.log(top);
+            for (const line of lines) {
+              // eslint-disable-next-line no-console
+              console.log(`${pad}│${reset} ${line} ${reset}│`);
+            }
+            // eslint-disable-next-line no-console
+            console.log(bottom);
+            // eslint-disable-next-line no-console
+            console.log("");
           } catch {
             ctx.logger.info(
               "QR code: generate manually with: qrencode -t ANSI '${inviteLink}'",
