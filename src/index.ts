@@ -1,5 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createDeltaChatChannel, inviteState, runtimeState } from "./channel.js";
+import {
+  createDeltaChatChannel,
+  inviteState,
+  runtimeState,
+  loadPersistedInviteState,
+} from "./channel.js";
 
 /** OpenClaw API interface for plugin registration */
 interface OpenClawAPI {
@@ -42,14 +47,15 @@ export default function register(api: OpenClawAPI): void {
       ctx.program
         .command("deltachat-invite")
         .description("Show the Delta Chat SecureJoin invite link and QR code path")
-        .action(() => {
-          if (!inviteState.inviteLink) {
+        .action(async () => {
+          const state = await loadPersistedInviteState();
+          if (!state.inviteLink) {
             ctx.logger.error(
               "Delta Chat channel not started yet. Start the gateway to generate the invite.",
             );
             return;
           }
-          ctx.logger.info(`Invite link: ${inviteState.inviteLink}`);
+          ctx.logger.info(`Invite link: ${state.inviteLink}`);
           ctx.logger.info(
             `QR code SVG:  ${inviteState.svg ? "generated (available via /deltachat/invite/qr.svg)" : "not available"}`,
           );

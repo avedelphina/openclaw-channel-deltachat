@@ -1,6 +1,52 @@
 import { writeFile, mkdir, readFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
 import { homedir } from "node:os";
+
+function resolveDataDir(dir: string): string {
+  return dir.startsWith("~") ? dir.replace("~", homedir()) : dir;
+}
+
+const INVITE_STATE_FILE = "invite-state.json";
+
+async function persistInviteState(
+  dataDir: string,
+  state: { inviteLink: string; accountType: "chatmail" | "email" },
+): Promise<void> {
+  const dir = resolveDataDir(dataDir);
+  await mkdir(dir, { recursive: true });
+  await writeFile(resolve(dir, INVITE_STATE_FILE), JSON.stringify(state, null, 2));
+}
+
+async function clearPersistedInviteState(dataDir: string): Promise<void> {
+  try {
+    const dir = resolveDataDir(dataDir);
+    await writeFile(resolve(dir, INVITE_STATE_FILE), JSON.stringify({}));
+  } catch {
+    // ignore
+  }
+}
+
+export async function loadPersistedInviteState(
+  dataDir = "~/.openclaw/deltachat-data",
+): Promise<{
+  inviteLink: string | null;
+  accountType: "chatmail" | "email" | null;
+}> {
+  try {
+    const dir = resolveDataDir(dataDir);
+    const raw = await readFile(resolve(dir, INVITE_STATE_FILE), "utf-8");
+    const parsed = JSON.parse(raw) as {
+      inviteLink?: string;
+      accountType?: "chatmail" | "email";
+    };
+    return {
+      inviteLink: parsed.inviteLink ?? null,
+      accountType: parsed.accountType ?? null,
+    };
+  } catch {
+    return { inviteLink: null, accountType: null };
+  }
+}
 import type { T } from "@deltachat/jsonrpc-client";
 import { DeltaChatClient } from "./deltachat.js";
 import { validateConfig, type DeltaChatConfig } from "./types.js";
@@ -328,6 +374,8 @@ export function createDeltaChatChannel() {
   let client: DeltaChatClient | null = null;
   // Used to keep startAccount alive until stopAccount is called
   let accountStopped: (() => void) | null = null;
+  // Data directory of the active account, needed for cleanup in stopAccount
+  let accountDataDir: string | null = null;
 
   return {
     id: "deltachat" as const,
@@ -409,6 +457,7 @@ export function createDeltaChatChannel() {
         };
 
         const account = ctx.account;
+        accountDataDir = account.dataDir;
         const agentIdentity = await resolveAgentIdentity(ctx.cfg);
         log.info(`Resolved agent name: ${agentIdentity.name}`);
         if (agentIdentity.avatarPath) {
@@ -471,14 +520,17 @@ export function createDeltaChatChannel() {
           log.info(`SecureJoin invite link: ${invite.inviteLink}`);
 
           // Save QR code SVG to data dir for external access
-          const dataDir = account.dataDir.startsWith("~")
-            ? account.dataDir.replace("~", homedir())
-            : account.dataDir;
-          const qrDir = resolve(dataDir);
-          await mkdir(qrDir, { recursive: true });
-          const qrPath = resolve(qrDir, "invite-qr.svg");
+          const dataDir = resolveDataDir(account.dataDir);
+          await mkdir(dataDir, { recursive: true });
+          const qrPath = resolve(dataDir, "invite-qr.svg");
           await writeFile(qrPath, invite.svg);
           log.info(`SecureJoin QR code saved to ${qrPath}`);
+
+          // Persist invite state so CLI can read it even when gateway is stopped
+          await persistInviteState(account.dataDir, {
+            inviteLink: invite.inviteLink,
+            accountType: inviteState.accountType!,
+          });
         } catch (err) {
           log.error(`Failed to generate SecureJoin invite: ${err}`);
         }
@@ -668,6 +720,10 @@ export function createDeltaChatChannel() {
         inviteState.inviteLink = null;
         inviteState.svg = null;
         inviteState.accountType = null;
+        // Also clear persisted state so CLI doesn't show stale data
+        if (accountDataDir) {
+          await clearPersistedInviteState(accountDataDir);
+        }
       },
 
       loginWithQrStart: async (_params: {
