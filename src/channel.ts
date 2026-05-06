@@ -669,6 +669,39 @@ export function createDeltaChatChannel() {
         inviteState.svg = null;
         inviteState.accountType = null;
       },
+
+      loginWithQrStart: async (_params: {
+        accountId?: string;
+        force?: boolean;
+        timeoutMs?: number;
+        verbose?: boolean;
+      }): Promise<{ qrDataUrl?: string; message: string }> => {
+        if (!inviteState.svg) {
+          return {
+            message:
+              "Delta Chat channel not started yet. Start the gateway to generate the invite QR code.",
+          };
+        }
+        const qrDataUrl = `data:image/svg+xml;base64,${Buffer.from(inviteState.svg).toString("base64")}`;
+        return {
+          qrDataUrl,
+          message:
+            "Scan this QR code with Delta Chat to start an encrypted conversation with the bot.",
+        };
+      },
+
+      loginWithQrWait: async (_params: {
+        accountId?: string;
+        timeoutMs?: number;
+      }): Promise<{ connected: boolean; message: string }> => {
+        const ready = !!inviteState.inviteLink;
+        return {
+          connected: ready,
+          message: ready
+            ? "Delta Chat bot is ready. You can scan the QR code to connect."
+            : "Delta Chat channel not started yet.",
+        };
+      },
     },
 
     groups: {

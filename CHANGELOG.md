@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-05-06
+
+### Fixed
+
+- Removed `additionalProperties: false` from `openclaw.plugin.json` config schema to fix
+  "Unsupported type: . Use Raw mode." rendering error in the OpenClaw Control UI.
+
+### Added
+
+- Added `gateway.loginWithQrStart()` and `gateway.loginWithQrWait()` adapter methods.
+  This enables the OpenClaw UI to display a "Show QR Code" button for Delta Chat,
+  matching the UX of WhatsApp and other QR-based channels.
+
 ## [0.1.2] - 2026-04-13
 
 ### Added
