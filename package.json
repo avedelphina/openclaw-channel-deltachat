@@ -1,6 +1,6 @@
 {
   "name": "openclaw-channel-deltachat",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "OpenClaw channel plugin for Delta Chat",
   "type": "module",
   "main": "dist/index.js",
@@ -53,12 +53,14 @@
     "openclaw": "*"
   },
   "dependencies": {
-    "@deltachat/jsonrpc-client": "^2.47.0"
+    "@deltachat/jsonrpc-client": "^2.47.0",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/qrcode": "^1.5.6",
     "typescript": "^5.5.0",
-    "vitest": "^2.0.0",
-    "@types/node": "^22.0.0"
+    "vitest": "^2.0.0"
   },
   "license": "MIT"
 }

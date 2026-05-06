@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import QRCode from "qrcode";
 import {
   createDeltaChatChannel,
   inviteState,
@@ -56,9 +57,22 @@ export default function register(api: OpenClawAPI): void {
             return;
           }
           ctx.logger.info(`Invite link: ${state.inviteLink}`);
-          ctx.logger.info(
-            `QR code SVG:  ${inviteState.svg ? "generated (available via /deltachat/invite/qr.svg)" : "not available"}`,
-          );
+
+          // Generate terminal QR code from the invite link
+          try {
+            const qr = await QRCode.toString(state.inviteLink, {
+              type: "terminal",
+              small: true,
+            });
+            ctx.logger.info("Scan this QR code with Delta Chat:");
+            // eslint-disable-next-line no-console
+            console.log(qr);
+          } catch {
+            ctx.logger.info(
+              "QR code: generate manually with: qrencode -t ANSI '${inviteLink}'",
+            );
+          }
+
           ctx.logger.info(
             `HTML invite page: http://<gateway>/deltachat/invite`,
           );
