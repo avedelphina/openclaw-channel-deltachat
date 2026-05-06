@@ -2,11 +2,111 @@
   "id": "deltachat",
   "name": "Delta Chat",
   "description": "OpenClaw channel plugin for Delta Chat messaging",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "channels": ["deltachat"],
   "configSchema": {
     "type": "object",
     "additionalProperties": true,
     "properties": {}
+  },
+  "channelConfigs": {
+    "deltachat": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable or disable the Delta Chat channel"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address for the bot. Use 'auto' to create a chatmail account automatically"
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for the email account. Required when email is not 'auto'"
+          },
+          "chatmailServer": {
+            "type": "string",
+            "default": "nine.testrun.org",
+            "description": "Chatmail server for auto-created accounts. Only used when email is 'auto' or not set"
+          },
+          "customChatmailRelay": {
+            "type": "object",
+            "description": "Custom chatmail relay configuration for private/self-hosted chatmail servers",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "default": false,
+                "description": "Enable custom chatmail relay mode"
+              },
+              "url": {
+                "type": "string",
+                "description": "Full URL to the chatmail account creation endpoint (e.g., https://chatmail.example.com/new)"
+              },
+              "token": {
+                "type": "string",
+                "description": "Optional authentication token for the chatmail server"
+              }
+            }
+          },
+          "dataDir": {
+            "type": "string",
+            "default": "~/.openclaw/deltachat-data",
+            "description": "Directory for Delta Chat account data (keys, messages, etc.)"
+          },
+          "rpcServerPath": {
+            "type": "string",
+            "default": "deltachat-rpc-server",
+            "description": "Path to the deltachat-rpc-server binary"
+          },
+          "avatarPath": {
+            "type": "string",
+            "description": "Path to the bot's avatar/profile image file (PNG or JPEG). If not set, the plugin looks for avatar.png, avatar.jpg, or logo.png in the workspace"
+          },
+          "allowFrom": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of allowed email addresses that can interact with the bot. If not set, all users are allowed"
+          },
+          "requireMention": {
+            "type": "boolean",
+            "default": false,
+            "description": "Require the bot to be mentioned (@botname) in group chats to respond"
+          },
+          "dmPolicy": {
+            "type": "string",
+            "enum": ["open", "allowlist", "pairing", "disabled"],
+            "default": "open",
+            "description": "Direct message policy: open (anyone), allowlist (allowFrom only), pairing (verified contacts), disabled"
+          },
+          "groupPolicy": {
+            "type": "string",
+            "enum": ["open", "allowlist", "disabled"],
+            "default": "open",
+            "description": "Group chat policy: open (anyone), allowlist (groupAllowFrom only), disabled"
+          },
+          "groupAllowFrom": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of allowed email addresses that can interact in groups. If not set, all users are allowed"
+          },
+          "sendReadReceipts": {
+            "type": "boolean",
+            "default": true,
+            "description": "Send read receipts (MDN) for direct messages from allowed senders"
+          },
+          "configWrites": {
+            "type": "boolean",
+            "default": true,
+            "description": "Allow config updates triggered by /config commands from this channel"
+          }
+        }
+      },
+      "label": "Delta Chat",
+      "description": "Bridge Delta Chat messaging to OpenClaw agents via email"
+    }
   }
 }

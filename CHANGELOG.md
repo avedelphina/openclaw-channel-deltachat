@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-05-06
+
+### Fixed
+
+- Added `channelConfigs.deltachat.schema` to `openclaw.plugin.json`. OpenClaw
+  2026.4+ requires this metadata for channel plugins so config schema and setup
+  surfaces work before runtime loads. This eliminates the manifest warning:
+  "channel plugin manifest declares deltachat without channelConfigs metadata".
+
 ## [0.1.4] - 2026-05-06
 
 ### Fixed
