@@ -63,24 +63,12 @@ export class DeltaChatClient {
     const dataDir = this.resolveDataDir();
     await mkdir(dataDir, { recursive: true });
 
-    // Set DC_ACCOUNTS_PATH temporarily so the child inherits it via the
-    // default environment. We avoid passing an explicit env option so the
-    // child receives the full parent environment (required for binary deps).
-    const originalDcAccountsPath = process.env.DC_ACCOUNTS_PATH;
-    process.env.DC_ACCOUNTS_PATH = dataDir;
-    try {
-      this.server = spawn(this.config.rpcServerPath, [], {
-        // security: shell disabled to prevent command injection
-        shell: false,
-        stdio: ["pipe", "pipe", "inherit"],
-      });
-    } finally {
-      if (originalDcAccountsPath === undefined) {
-        delete process.env.DC_ACCOUNTS_PATH;
-      } else {
-        process.env.DC_ACCOUNTS_PATH = originalDcAccountsPath;
-      }
-    }
+    this.server = spawn(this.config.rpcServerPath, [], {
+      // security: shell disabled to prevent command injection
+      shell: false,
+      env: { ...process.env, DC_ACCOUNTS_PATH: dataDir },
+      stdio: ["pipe", "pipe", "inherit"],
+    });
 
     // Wait for spawn to succeed or fail before proceeding
     await new Promise<void>((resolve, reject) => {
@@ -451,8 +439,9 @@ export class DeltaChatClient {
         displayname: this.config.displayName,
         selfavatar: avatarPathExplicit,
       });
-      const transport: Record<string, unknown> = {
+      await this.dc.rpc.addOrUpdateTransport(this.accountId, {
         addr: this.config.email,
+        password: this.config.password,
         imapServer: null,
         imapPort: null,
         imapSecurity: null,
@@ -464,12 +453,7 @@ export class DeltaChatClient {
         smtpPassword: null,
         certificateChecks: null,
         oauth2: null,
-      };
-      if (this.config.password) {
-        const pwdKey = "password";
-        transport[pwdKey] = this.config.password;
-      }
-      await this.dc.rpc.addOrUpdateTransport(this.accountId, transport as any);
+      });
       await this.dc.rpc.configure(this.accountId);
       const addr = await this.dc.rpc.getConfig(this.accountId, "addr");
       console.log(`[deltachat] Configured account: ${addr}`);
@@ -565,8 +549,9 @@ export class DeltaChatClient {
         displayname: this.config.displayName,
         selfavatar: avatarPathRelay,
       });
-      const transport: Record<string, unknown> = {
+      await this.dc.rpc.addOrUpdateTransport(this.accountId, {
         addr: data.email,
+        password: data.password,
         imapServer: null,
         imapPort: null,
         imapSecurity: null,
@@ -578,12 +563,7 @@ export class DeltaChatClient {
         smtpPassword: null,
         certificateChecks: null,
         oauth2: null,
-      };
-      if (data.password) {
-        const pwdKey = "password";
-        transport[pwdKey] = data.password;
-      }
-      await this.dc.rpc.addOrUpdateTransport(this.accountId, transport as any);
+      });
       await this.dc.rpc.configure(this.accountId);
 
       console.log(`[deltachat] Configured custom relay account: ${data.email}`);
