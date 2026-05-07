@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { mkdir, access } from "node:fs/promises";
@@ -9,6 +9,14 @@ import {
   type DcEvent,
 } from "@deltachat/jsonrpc-client";
 import type { DeltaChatConfig } from "./types.js";
+
+function checkBinaryExists(command: string): boolean {
+  const check =
+    process.platform === "win32"
+      ? spawnSync("where", [command], { stdio: "ignore" })
+      : spawnSync("command", ["-v", command], { stdio: "ignore" });
+  return check.status === 0;
+}
 
 export type SessionKey =
   | { type: "dm"; email: string }
@@ -62,6 +70,14 @@ export class DeltaChatClient {
   async start(): Promise<void> {
     const dataDir = this.resolveDataDir();
     await mkdir(dataDir, { recursive: true });
+
+    if (!checkBinaryExists(this.config.rpcServerPath)) {
+      throw new Error(
+        `deltachat-rpc-server not found: "${this.config.rpcServerPath}". ` +
+          `Install it via pip (pip install deltachat-rpc-server) or download ` +
+          `a prebuilt binary from https://github.com/chatmail/core/releases`,
+      );
+    }
 
     this.server = spawn(this.config.rpcServerPath, [], {
       // security: shell disabled to prevent injection; only whitelisted

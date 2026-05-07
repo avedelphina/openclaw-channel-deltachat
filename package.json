@@ -1,7 +1,7 @@
 {
   "name": "openclaw-channel-deltachat",
   "version": "0.1.13",
-  "description": "OpenClaw channel plugin for Delta Chat",
+  "description": "OpenClaw channel plugin for Delta Chat. Requires the deltachat-rpc-server binary on PATH (install via pip or official Delta Chat releases).",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
