@@ -1,4 +1,4 @@
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { mkdir, access } from "node:fs/promises";
@@ -9,14 +9,6 @@ import {
   type DcEvent,
 } from "@deltachat/jsonrpc-client";
 import type { DeltaChatConfig } from "./types.js";
-
-function checkBinaryExists(command: string): boolean {
-  const check =
-    process.platform === "win32"
-      ? spawnSync("where", [command], { stdio: "ignore" })
-      : spawnSync("command", ["-v", command], { stdio: "ignore" });
-  return check.status === 0;
-}
 
 export type SessionKey =
   | { type: "dm"; email: string }
@@ -71,40 +63,35 @@ export class DeltaChatClient {
     const dataDir = this.resolveDataDir();
     await mkdir(dataDir, { recursive: true });
 
-    if (!checkBinaryExists(this.config.rpcServerPath)) {
-      throw new Error(
-        `deltachat-rpc-server not found: "${this.config.rpcServerPath}". ` +
-          `Install it via pip (pip install deltachat-rpc-server) or download ` +
-          `a prebuilt binary from https://github.com/chatmail/core/releases`,
-      );
+    // Set DC_ACCOUNTS_PATH temporarily so the child inherits it via the
+    // default environment. We avoid passing an explicit env option so the
+    // child receives the full parent environment (required for binary deps).
+    const originalDcAccountsPath = process.env.DC_ACCOUNTS_PATH;
+    process.env.DC_ACCOUNTS_PATH = dataDir;
+    try {
+      this.server = spawn(this.config.rpcServerPath, [], {
+        // security: shell disabled to prevent command injection
+        shell: false,
+        stdio: ["pipe", "pipe", "inherit"],
+      });
+    } finally {
+      if (originalDcAccountsPath === undefined) {
+        delete process.env.DC_ACCOUNTS_PATH;
+      } else {
+        process.env.DC_ACCOUNTS_PATH = originalDcAccountsPath;
+      }
     }
-
-    this.server = spawn(this.config.rpcServerPath, [], {
-      // security: shell disabled to prevent injection; only whitelisted
-      // env vars are forwarded to the child process.
-      shell: false,
-      env: {
-        PATH: process.env.PATH,
-        HOME: process.env.HOME,
-        USER: process.env.USER,
-        LOGNAME: process.env.LOGNAME,
-        SHELL: process.env.SHELL,
-        TMPDIR: process.env.TMPDIR,
-        LANG: process.env.LANG,
-        LC_ALL: process.env.LC_ALL,
-        DC_ACCOUNTS_PATH: dataDir,
-      },
-      stdio: ["pipe", "pipe", "inherit"],
-    });
 
     // Wait for spawn to succeed or fail before proceeding
     await new Promise<void>((resolve, reject) => {
-      this.server!.on("error", (err: Error) => {
-        reject(
-          new Error(
-            `Failed to spawn ${this.config.rpcServerPath}: ${err.message}`,
-          ),
-        );
+      this.server!.on("error", (err: Error & { code?: string }) => {
+        const msg =
+          err.code === "ENOENT"
+            ? `deltachat-rpc-server not found: "${this.config.rpcServerPath}". ` +
+              `Install it via pip (pip install deltachat-rpc-server) or download ` +
+              `a prebuilt binary from https://github.com/chatmail/core/releases`
+            : `Failed to spawn ${this.config.rpcServerPath}: ${err.message}`;
+        reject(new Error(msg));
       });
       this.server!.on("spawn", () => {
         resolve();
