@@ -35,12 +35,12 @@
   "author": "Tomas Kracmar <tomas.kracmar@cqre.net>",
   "repository": {
     "type": "git",
-    "url": "https://git.ocean/avedelphina/deltaclaw.git"
+    "url": "https://github.com/avedelphina/openclaw-channel-deltachat.git"
   },
   "bugs": {
-    "url": "https://git.ocean/avedelphina/deltaclaw/issues"
+    "url": "https://github.com/avedelphina/openclaw-channel-deltachat/issues"
   },
-  "homepage": "https://git.ocean/avedelphina/deltaclaw#readme",
+  "homepage": "https://github.com/avedelphina/openclaw-channel-deltachat#readme",
   "engines": {
     "node": ">=20"
   },

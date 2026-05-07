@@ -56,7 +56,7 @@ openclaw plugins install openclaw-channel-deltachat
 Or from source:
 
 ```bash
-git clone https://git.ocean/avedelphina/deltaclaw.git
+git clone https://github.com/avedelphina/openclaw-channel-deltachat.git
 cd deltaclaw
 npm install && npm run build
 openclaw plugins install -l .
