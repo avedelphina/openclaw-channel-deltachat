@@ -108,12 +108,29 @@ export default function register(api: OpenClawAPI): void {
 
       // POST /deltachat/groups -> create group
       if (req.method === "POST" && url === "/deltachat/groups") {
+        const MAX_BODY_SIZE = 1_048_576;
         let body = "";
         for await (const chunk of req) {
           body += chunk;
+          if (body.length > MAX_BODY_SIZE) {
+            res.writeHead(413, { "Content-Type": "text/plain" });
+            res.end("Payload too large");
+            return;
+          }
         }
-        const parsed = JSON.parse(body) as { name?: string };
-        const name = parsed.name ?? "OpenClaw Group";
+        let parsed: { name?: unknown };
+        try {
+          parsed = JSON.parse(body);
+        } catch {
+          res.writeHead(400, { "Content-Type": "text/plain" });
+          res.end("Invalid JSON");
+          return;
+        }
+        const rawName = parsed.name;
+        const name =
+          typeof rawName === "string" && rawName.trim().length > 0
+            ? rawName.trim().slice(0, 100)
+            : "OpenClaw Group";
 
         try {
           const groupId = await dc.createGroupChat(name, true);
@@ -128,8 +145,10 @@ export default function register(api: OpenClawAPI): void {
             }),
           );
         } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(`[deltachat] Failed to create group: ${err}`);
           res.writeHead(500, { "Content-Type": "text/plain" });
-          res.end(`Failed to create group: ${err}`);
+          res.end("Failed to create group");
         }
         return;
       }
@@ -168,8 +187,10 @@ export default function register(api: OpenClawAPI): void {
             }),
           );
         } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(`[deltachat] Failed to get group invite: ${err}`);
           res.writeHead(500, { "Content-Type": "text/plain" });
-          res.end(`Failed to get group invite: ${err}`);
+          res.end("Failed to get group invite");
         }
         return;
       }
@@ -234,6 +255,19 @@ export default function register(api: OpenClawAPI): void {
 }
 
 /**
+ * Escape HTML special characters to prevent XSS when interpolating
+ * user-visible strings into the invite page.
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
  * Generate the HTML invite page based on account type.
  */
 function generateInvitePage(
@@ -242,11 +276,12 @@ function generateInvitePage(
   accountType: "chatmail" | "email" | null,
 ): string {
   const isChatmail = accountType === "chatmail";
+  const safeLink = escapeHtml(inviteLink);
 
   const chatmailInstructions = `
     <div class="qr-container">${svg}</div>
     <p>Or open this invite link in Delta Chat:</p>
-    <a class="invite-link" href="${inviteLink}">${inviteLink}</a>
+    <a class="invite-link" href="${safeLink}">${safeLink}</a>
     <ol class="steps">
       <li>Open Delta Chat on your phone</li>
       <li>Tap the QR code scanner (or paste the link)</li>
@@ -267,7 +302,7 @@ function generateInvitePage(
     </div>
     <div class="qr-container">${svg}</div>
     <p>Or use this invite link for verified connection:</p>
-    <a class="invite-link" href="${inviteLink}">${inviteLink}</a>
+    <a class="invite-link" href="${safeLink}">${safeLink}</a>
   `;
 
   return `<!DOCTYPE html>

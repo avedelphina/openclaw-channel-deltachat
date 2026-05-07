@@ -359,16 +359,24 @@ export class DeltaChatClient {
   // --- Private ---
 
   private resolveDataDir(): string {
-    let dir = this.config.dataDir;
-    if (dir.startsWith("~")) {
-      dir = dir.replace("~", homedir());
+    const dir = this.config.dataDir;
+    if (dir.split(/[\\/]/).some((segment) => segment === "..")) {
+      throw new Error(`dataDir cannot contain '..' path components: ${dir}`);
     }
-    return resolve(dir);
+    let resolved = dir.startsWith("~") ? dir.replace("~", homedir()) : dir;
+    resolved = resolve(resolved);
+    return resolved;
   }
 
   private resolveAvatarPath(): string | null {
     if (!this.config.avatarPath) return null;
     let path = this.config.avatarPath;
+    if (path.split(/[\\/]/).some((segment) => segment === "..")) {
+      console.error(
+        `[deltachat] avatarPath cannot contain '..' path components: ${path}`,
+      );
+      return null;
+    }
     if (path.startsWith("~")) {
       path = path.replace("~", homedir());
     }
@@ -570,6 +578,15 @@ export class DeltaChatClient {
     if (!this.running) return; // Expected shutdown
 
     console.error(`[deltachat] rpc-server exited with code ${code}`);
+
+    // Clean up old handles before attempting respawn to avoid leaking
+    // file descriptors and memory.
+    this.dc?.close();
+    if (this.server && !this.server.killed) {
+      this.server.kill();
+    }
+    this.dc = null;
+    this.server = null;
 
     const now = Date.now();
     this.crashTimes.push(now);

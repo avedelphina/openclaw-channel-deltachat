@@ -78,6 +78,24 @@ export const DEFAULT_CONFIG: Partial<DeltaChatConfig> = {
 };
 
 /**
+ * Reject paths that attempt directory traversal with `..` segments.
+ */
+function assertNoTraversal(inputPath: string, optionName: string): void {
+  if (inputPath.split(/[\\/]/).some((segment) => segment === "..")) {
+    throw new Error(
+      `${optionName} cannot contain '..' path components: ${inputPath}`,
+    );
+  }
+}
+
+/**
+ * Basic email sanity check. Not RFC-complete, but blocks obvious garbage.
+ */
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+/**
  * Validates the configuration and returns normalized config.
  * Throws if the configuration is invalid.
  */
@@ -129,16 +147,22 @@ export function validateConfig(
     );
   }
 
+  // Validate dataDir and avatarPath for traversal attempts
+  if (merged.dataDir) assertNoTraversal(merged.dataDir, "dataDir");
+  if (merged.avatarPath) assertNoTraversal(merged.avatarPath, "avatarPath");
+
   // Validate allowFrom if provided
   if (merged.allowFrom) {
     if (!Array.isArray(merged.allowFrom)) {
       throw new Error("allowFrom must be an array of email addresses");
     }
     for (const email of merged.allowFrom) {
-      if (typeof email !== "string" || !email.includes("@")) {
+      if (typeof email !== "string" || !isValidEmail(email)) {
         throw new Error(`Invalid email in allowFrom: ${email}`);
       }
     }
+    // Normalize to lowercase for case-insensitive matching
+    merged.allowFrom = merged.allowFrom.map((e) => e.toLowerCase());
   }
 
   // Validate groupAllowFrom if provided
@@ -147,10 +171,12 @@ export function validateConfig(
       throw new Error("groupAllowFrom must be an array of email addresses");
     }
     for (const email of merged.groupAllowFrom) {
-      if (typeof email !== "string" || !email.includes("@")) {
+      if (typeof email !== "string" || !isValidEmail(email)) {
         throw new Error(`Invalid email in groupAllowFrom: ${email}`);
       }
     }
+    // Normalize to lowercase for case-insensitive matching
+    merged.groupAllowFrom = merged.groupAllowFrom.map((e) => e.toLowerCase());
   }
 
   return merged;

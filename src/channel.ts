@@ -1,9 +1,12 @@
-import { writeFile, mkdir, readFile, access } from "node:fs/promises";
+import { writeFile, mkdir, readFile, access, chmod } from "node:fs/promises";
 import { resolve } from "node:path";
 import { homedir } from "node:os";
 
 function resolveDataDir(dir: string): string {
-  return dir.startsWith("~") ? dir.replace("~", homedir()) : dir;
+  if (dir.split(/[\\/]/).some((segment) => segment === "..")) {
+    throw new Error(`dataDir cannot contain '..' path components: ${dir}`);
+  }
+  return resolve(dir.startsWith("~") ? dir.replace("~", homedir()) : dir);
 }
 
 const INVITE_STATE_FILE = "invite-state.json";
@@ -14,7 +17,14 @@ async function persistInviteState(
 ): Promise<void> {
   const dir = resolveDataDir(dataDir);
   await mkdir(dir, { recursive: true });
-  await writeFile(resolve(dir, INVITE_STATE_FILE), JSON.stringify(state, null, 2));
+  const filePath = resolve(dir, INVITE_STATE_FILE);
+  await writeFile(filePath, JSON.stringify(state, null, 2), {
+    mode: 0o600,
+  });
+  // Ensure restrictive permissions even if the file already existed
+  await chmod(filePath, 0o600).catch(() => {
+    // ignore platforms that don't support chmod
+  });
 }
 
 async function clearPersistedInviteState(dataDir: string): Promise<void> {
@@ -572,7 +582,7 @@ export function createDeltaChatChannel() {
           log.error(`Failed to start Delta Chat client: ${err}`);
           client = null;
           runtimeState.client = null;
-          return;
+          throw err;
         }
 
         log.info(`Started Delta Chat client as "${agentIdentity.name}"`);
@@ -624,9 +634,14 @@ export function createDeltaChatChannel() {
               `Incoming message from ${senderEmail}: "${msg.text.slice(0, 50)}"`,
             );
 
-            // Check allowFrom if configured
+            // Check global allowFrom if configured.
+            // NOTE: This applies to BOTH direct messages and group chats,
+            // regardless of dmPolicy/groupPolicy settings. It is an
+            // additional gate on top of the chat-type-specific policies.
             if (account.allowFrom && account.allowFrom.length > 0) {
-              const isAllowed = account.allowFrom.includes(senderEmail);
+              const isAllowed = account.allowFrom.includes(
+                senderEmail.toLowerCase(),
+              );
               if (!isAllowed) {
                 log.warn(
                   `Rejecting message from unauthorized sender: ${senderEmail}`,

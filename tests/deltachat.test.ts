@@ -190,6 +190,44 @@ describe("validateConfig", () => {
     ).toThrow("Invalid email in allowFrom");
   });
 
+  it("throws when allowFrom contains email without domain dot", () => {
+    expect(() =>
+      validateConfig({
+        allowFrom: ["alice@example"],
+      }),
+    ).toThrow("Invalid email in allowFrom");
+  });
+
+  it("normalizes allowFrom emails to lowercase", () => {
+    const config = validateConfig({
+      allowFrom: ["Alice@Example.COM", "BOB@Test.Org"],
+    });
+    expect(config.allowFrom).toEqual(["alice@example.com", "bob@test.org"]);
+  });
+
+  it("normalizes groupAllowFrom emails to lowercase", () => {
+    const config = validateConfig({
+      groupAllowFrom: ["Alice@Example.COM"],
+    });
+    expect(config.groupAllowFrom).toEqual(["alice@example.com"]);
+  });
+
+  it("throws when dataDir contains path traversal", () => {
+    expect(() =>
+      validateConfig({
+        dataDir: "../../etc/deltachat",
+      }),
+    ).toThrow("dataDir cannot contain '..' path components");
+  });
+
+  it("throws when avatarPath contains path traversal", () => {
+    expect(() =>
+      validateConfig({
+        avatarPath: "../../../etc/passwd",
+      }),
+    ).toThrow("avatarPath cannot contain '..' path components");
+  });
+
   it("accepts complete custom chatmail configuration", () => {
     const config = validateConfig({
       enabled: true,
