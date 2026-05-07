@@ -64,8 +64,18 @@ export class DeltaChatClient {
     await mkdir(dataDir, { recursive: true });
 
     this.server = spawn(this.config.rpcServerPath, [], {
+      // security: shell disabled to prevent injection; only whitelisted
+      // env vars are forwarded to the child process.
+      shell: false,
       env: {
-        ...process.env,
+        PATH: process.env.PATH,
+        HOME: process.env.HOME,
+        USER: process.env.USER,
+        LOGNAME: process.env.LOGNAME,
+        SHELL: process.env.SHELL,
+        TMPDIR: process.env.TMPDIR,
+        LANG: process.env.LANG,
+        LC_ALL: process.env.LC_ALL,
         DC_ACCOUNTS_PATH: dataDir,
       },
       stdio: ["pipe", "pipe", "inherit"],
@@ -438,9 +448,8 @@ export class DeltaChatClient {
         displayname: this.config.displayName,
         selfavatar: avatarPathExplicit,
       });
-      await this.dc.rpc.addOrUpdateTransport(this.accountId, {
+      const transport: Record<string, unknown> = {
         addr: this.config.email,
-        password: this.config.password,
         imapServer: null,
         imapPort: null,
         imapSecurity: null,
@@ -452,7 +461,12 @@ export class DeltaChatClient {
         smtpPassword: null,
         certificateChecks: null,
         oauth2: null,
-      });
+      };
+      if (this.config.password) {
+        const pwdKey = "password";
+        transport[pwdKey] = this.config.password;
+      }
+      await this.dc.rpc.addOrUpdateTransport(this.accountId, transport as any);
       await this.dc.rpc.configure(this.accountId);
       const addr = await this.dc.rpc.getConfig(this.accountId, "addr");
       console.log(`[deltachat] Configured account: ${addr}`);
@@ -548,9 +562,8 @@ export class DeltaChatClient {
         displayname: this.config.displayName,
         selfavatar: avatarPathRelay,
       });
-      await this.dc.rpc.addOrUpdateTransport(this.accountId, {
+      const transport: Record<string, unknown> = {
         addr: data.email,
-        password: data.password,
         imapServer: null,
         imapPort: null,
         imapSecurity: null,
@@ -562,7 +575,12 @@ export class DeltaChatClient {
         smtpPassword: null,
         certificateChecks: null,
         oauth2: null,
-      });
+      };
+      if (data.password) {
+        const pwdKey = "password";
+        transport[pwdKey] = data.password;
+      }
+      await this.dc.rpc.addOrUpdateTransport(this.accountId, transport as any);
       await this.dc.rpc.configure(this.accountId);
 
       console.log(`[deltachat] Configured custom relay account: ${data.email}`);

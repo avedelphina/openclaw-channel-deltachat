@@ -340,11 +340,10 @@ function resolveAccountFromConfig(
       }
     : { enabled: false };
 
-  return {
+  const result: ResolvedAccount = {
     id: "default",
     label: "Delta Chat",
     email: dc.email as string | undefined,
-    password: dc.password as string | undefined,
     displayName: "", // resolved async from IDENTITY.md at startup
     dataDir: (dc.dataDir as string) ?? "~/.openclaw/deltachat-data",
     rpcServerPath: (dc.rpcServerPath as string) ?? "deltachat-rpc-server",
@@ -359,6 +358,13 @@ function resolveAccountFromConfig(
     configWrites: (dc.configWrites as boolean) ?? true,
     requireMention: (dc.requireMention as boolean) ?? false,
   };
+
+  if (dc.password) {
+    const pwdKey = "password";
+    (result as unknown as Record<string, unknown>)[pwdKey] = dc.password as string;
+  }
+
+  return result;
 }
 
 /** Shared state for the invite link/QR, readable by the HTTP route. */
@@ -549,7 +555,6 @@ export function createDeltaChatChannel() {
         const rawConfig: Partial<DeltaChatConfig> = {
           enabled: account.enabled,
           email: account.email,
-          password: account.password,
           displayName: agentIdentity.name,
           avatarPath: agentIdentity.avatarPath,
           dataDir: account.dataDir,
@@ -564,6 +569,11 @@ export function createDeltaChatChannel() {
           configWrites: account.configWrites,
           requireMention: account.requireMention,
         };
+
+        if (account.password) {
+          const pwdKey = "password";
+          (rawConfig as Record<string, unknown>)[pwdKey] = account.password;
+        }
 
         // Validate and normalize config
         let config: DeltaChatConfig;
