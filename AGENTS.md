@@ -230,7 +230,7 @@ Located at `~/.openclaw/openclaw.json`:
 | `groupPolicy` | string | no | `open` | Group policy: `open`, `allowlist`, `disabled` |
 | `groupAllowFrom` | string[] | no | — | Allowed emails for group `allowlist` policy |
 | `sendReadReceipts` | boolean | no | `true` | Send MDN read receipts for allowed DMs |
-| `configWrites` | boolean | no | `true` | Allow `/config` commands from this channel |
+| `configWrites` | boolean | no | `false` | Allow `/config` commands from this channel |
 | `avatarPath` | string | no | — | Path to bot avatar image (PNG/JPEG). Falls back to workspace files |
 | `requireMention` | boolean | no | `false` | Require @mention in groups |
 | `enabled` | boolean | no | `true` | Enable/disable the channel |

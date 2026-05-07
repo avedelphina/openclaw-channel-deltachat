@@ -2,7 +2,7 @@
   "id": "deltachat",
   "name": "Delta Chat",
   "description": "OpenClaw channel plugin for Delta Chat messaging",
-  "version": "0.1.10",
+  "version": "0.1.12",
   "channels": ["deltachat"],
   "configSchema": {
     "type": "object",
@@ -100,7 +100,7 @@
           },
           "configWrites": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "description": "Allow config updates triggered by /config commands from this channel"
           }
         }

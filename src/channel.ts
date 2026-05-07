@@ -355,7 +355,7 @@ function resolveAccountFromConfig(
     groupPolicy: (dc.groupPolicy as ResolvedAccount["groupPolicy"]) ?? "open",
     groupAllowFrom: dc.groupAllowFrom as string[] | undefined,
     sendReadReceipts: (dc.sendReadReceipts as boolean) ?? true,
-    configWrites: (dc.configWrites as boolean) ?? true,
+    configWrites: (dc.configWrites as boolean) ?? false,
     requireMention: (dc.requireMention as boolean) ?? false,
   };
 

@@ -210,7 +210,7 @@ Configure how the bot behaves in group chats:
 | `groupPolicy` | no | `"open"` | Group chat policy: `open`, `allowlist`, `disabled` |
 | `groupAllowFrom` | no | — | Array of allowed email addresses for group interactions |
 | `sendReadReceipts` | no | `true` | Send read receipts (MDN) for allowed DMs |
-| `configWrites` | no | `true` | Allow `/config` updates from this channel |
+| `configWrites` | no | `false` | Allow `/config` updates from this channel |
 | `requireMention` | no | `false` | Require @mention in groups for the bot to respond |
 | `enabled` | no | `true` | Enable/disable the channel |
 

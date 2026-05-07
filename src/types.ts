@@ -73,7 +73,7 @@ export const DEFAULT_CONFIG: Partial<DeltaChatConfig> = {
   dmPolicy: "open",
   groupPolicy: "open",
   sendReadReceipts: true,
-  configWrites: true,
+  configWrites: false,
   requireMention: false,
 };
 
