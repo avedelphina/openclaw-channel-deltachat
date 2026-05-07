@@ -47,7 +47,15 @@
   "openclaw": {
     "extensions": [
       "./dist/index.js"
-    ]
+    ],
+    "compat": {
+      "pluginApi": ">=2026.3.24",
+      "minGatewayVersion": "2026.3.24"
+    },
+    "build": {
+      "openclawVersion": "2026.4.15",
+      "pluginSdkVersion": "2026.3.24"
+    }
   },
   "peerDependencies": {
     "openclaw": "*"
