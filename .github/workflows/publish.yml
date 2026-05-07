@@ -1,0 +1,140 @@
+name: Publish to ClawHub
+
+on:
+  # Publish automatically when a version tag is pushed
+  push:
+    tags:
+      - "v*"
+
+  # Allow manual publishing from the Actions tab
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g., 0.1.11)"
+        required: true
+        type: string
+      dry_run:
+        description: "Run in dry-run mode"
+        required: false
+        type: boolean
+        default: false
+
+  # Dry-run on pull requests to validate the package
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Install ClawHub CLI
+        run: npm install -g clawhub@latest
+
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            # Strip leading 'v' from git tag
+            VERSION="${GITHUB_REF_NAME#v}"
+            echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to ClawHub (dry-run)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
+        run: |
+          clawhub package publish . \
+            --family code-plugin \
+            --version "${{ steps.version.outputs.VERSION }}" \
+            --changelog "Release ${{ steps.version.outputs.VERSION }}" \
+            --tags latest \
+            --dry-run \
+            --json
+
+      - name: Publish to ClawHub
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'false')
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+        run: |
+          clawhub login --token "$CLAWHUB_TOKEN" --no-browser
+          clawhub package publish . \
+            --family code-plugin \
+            --version "${{ steps.version.outputs.VERSION }}" \
+            --changelog "Release ${{ steps.version.outputs.VERSION }}" \
+            --tags latest \
+            --json
+
+  dry-run:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Install ClawHub CLI
+        run: npm install -g clawhub@latest
+
+      - name: Dry-run publish
+        run: |
+          clawhub package publish . \
+            --family code-plugin \
+            --version "0.0.0-pr" \
+            --changelog "PR dry-run" \
+            --tags latest \
+            --dry-run \
+            --json
