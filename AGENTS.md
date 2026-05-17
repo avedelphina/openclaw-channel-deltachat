@@ -206,9 +206,9 @@ Located at `~/.openclaw/openclaw.json`:
       },
       "dataDir": "~/.openclaw/deltachat-data",
       "rpcServerPath": "deltachat-rpc-server",
-      "dmPolicy": "open",
+      "dmPolicy": "pairing",
       "allowFrom": ["user@example.com"],
-      "requireMention": false,
+      "requireMention": true,
       "enabled": true
     }
   }
@@ -225,14 +225,14 @@ Located at `~/.openclaw/openclaw.json`:
 | `customChatmailRelay` | object | no | — | Custom relay config (see below) |
 | `dataDir` | string | no | `~/.openclaw/deltachat-data` | Delta Chat data directory |
 | `rpcServerPath` | string | no | `deltachat-rpc-server` | Path to rpc-server binary |
-| `dmPolicy` | string | no | `open` | DM policy: `open`, `allowlist`, `pairing`, `disabled` |
+| `dmPolicy` | string | no | `pairing` | DM policy: `open`, `allowlist`, `pairing`, `disabled` |
 | `allowFrom` | string[] | no | — | Allowed emails for `allowlist` policy |
 | `groupPolicy` | string | no | `open` | Group policy: `open`, `allowlist`, `disabled` |
 | `groupAllowFrom` | string[] | no | — | Allowed emails for group `allowlist` policy |
 | `sendReadReceipts` | boolean | no | `true` | Send MDN read receipts for allowed DMs |
 | `configWrites` | boolean | no | `false` | Allow `/config` commands from this channel |
 | `avatarPath` | string | no | — | Path to bot avatar image (PNG/JPEG). Falls back to workspace files |
-| `requireMention` | boolean | no | `false` | Require @mention in groups |
+| `requireMention` | boolean | no | `true` | Require @mention in groups |
 | `enabled` | boolean | no | `true` | Enable/disable the channel |
 
 ### Verified Groups

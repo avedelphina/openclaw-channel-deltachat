@@ -68,8 +68,8 @@ describe("validateConfig", () => {
     expect(config.dataDir).toBe("~/.openclaw/deltachat-data");
     expect(config.rpcServerPath).toBe("deltachat-rpc-server");
     expect(config.chatmailServer).toBe("nine.testrun.org");
-    expect(config.dmPolicy).toBe("open");
-    expect(config.requireMention).toBe(false);
+    expect(config.dmPolicy).toBe("pairing");
+    expect(config.requireMention).toBe(true);
   });
 
   it("uses provided values over defaults", () => {
@@ -346,7 +346,7 @@ describe("DEFAULT_CONFIG", () => {
     expect(DEFAULT_CONFIG.dataDir).toBe("~/.openclaw/deltachat-data");
     expect(DEFAULT_CONFIG.rpcServerPath).toBe("deltachat-rpc-server");
     expect(DEFAULT_CONFIG.chatmailServer).toBe("nine.testrun.org");
-    expect(DEFAULT_CONFIG.dmPolicy).toBe("open");
-    expect(DEFAULT_CONFIG.requireMention).toBe(false);
+    expect(DEFAULT_CONFIG.dmPolicy).toBe("pairing");
+    expect(DEFAULT_CONFIG.requireMention).toBe(true);
   });
 });

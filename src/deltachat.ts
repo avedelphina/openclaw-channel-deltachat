@@ -61,12 +61,26 @@ export class DeltaChatClient {
 
   async start(): Promise<void> {
     const dataDir = this.resolveDataDir();
-    await mkdir(dataDir, { recursive: true });
+    await mkdir(dataDir, { recursive: true, mode: 0o700 });
 
     this.server = spawn(this.config.rpcServerPath, [], {
       // security: shell disabled to prevent command injection
       shell: false,
-      env: { ...process.env, DC_ACCOUNTS_PATH: dataDir },
+      // security: whitelist environment to avoid leaking gateway secrets
+      env: {
+        PATH: process.env.PATH,
+        HOME: process.env.HOME,
+        USER: process.env.USER,
+        LOGNAME: process.env.LOGNAME,
+        TMPDIR: process.env.TMPDIR,
+        TEMP: process.env.TEMP,
+        TMP: process.env.TMP,
+        LANG: process.env.LANG,
+        LC_ALL: process.env.LC_ALL,
+        LC_CTYPE: process.env.LC_CTYPE,
+        LC_MESSAGES: process.env.LC_MESSAGES,
+        DC_ACCOUNTS_PATH: dataDir,
+      },
       stdio: ["pipe", "pipe", "inherit"],
     });
 

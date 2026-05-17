@@ -70,11 +70,11 @@ export const DEFAULT_CONFIG: Partial<DeltaChatConfig> = {
   dataDir: "~/.openclaw/deltachat-data",
   rpcServerPath: "deltachat-rpc-server",
   chatmailServer: "nine.testrun.org",
-  dmPolicy: "open",
+  dmPolicy: "pairing",
   groupPolicy: "open",
   sendReadReceipts: true,
   configWrites: false,
-  requireMention: false,
+  requireMention: true,
 };
 
 /**

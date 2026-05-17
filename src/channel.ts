@@ -16,7 +16,7 @@ async function persistInviteState(
   state: { inviteLink: string; accountType: "chatmail" | "email" },
 ): Promise<void> {
   const dir = resolveDataDir(dataDir);
-  await mkdir(dir, { recursive: true });
+  await mkdir(dir, { recursive: true, mode: 0o700 });
   const filePath = resolve(dir, INVITE_STATE_FILE);
   await writeFile(filePath, JSON.stringify(state, null, 2), {
     mode: 0o600,
@@ -600,7 +600,7 @@ export function createDeltaChatChannel() {
 
           // Save QR code SVG to data dir for external access
           const dataDir = resolveDataDir(account.dataDir);
-          await mkdir(dataDir, { recursive: true });
+          await mkdir(dataDir, { recursive: true, mode: 0o700 });
           const qrPath = resolve(dataDir, "invite-qr.svg");
           await writeFile(qrPath, invite.svg);
           log.info(`SecureJoin QR code saved to ${qrPath}`);
