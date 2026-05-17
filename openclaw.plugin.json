@@ -2,8 +2,10 @@
   "id": "deltachat",
   "name": "Delta Chat",
   "description": "OpenClaw channel plugin for Delta Chat messaging. Requires the deltachat-rpc-server binary on PATH.",
-  "version": "0.1.19",
-  "channels": ["deltachat"],
+  "version": "0.1.20",
+  "channels": [
+    "deltachat"
+  ],
   "configSchema": {
     "type": "object",
     "additionalProperties": true,
@@ -68,7 +70,9 @@
           },
           "allowFrom": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "List of allowed email addresses that can interact with the bot. If not set, all users are allowed"
           },
           "requireMention": {
@@ -78,19 +82,30 @@
           },
           "dmPolicy": {
             "type": "string",
-            "enum": ["open", "allowlist", "pairing", "disabled"],
+            "enum": [
+              "open",
+              "allowlist",
+              "pairing",
+              "disabled"
+            ],
             "default": "pairing",
             "description": "Direct message policy: open (anyone), allowlist (allowFrom only), pairing (verified contacts), disabled"
           },
           "groupPolicy": {
             "type": "string",
-            "enum": ["open", "allowlist", "disabled"],
+            "enum": [
+              "open",
+              "allowlist",
+              "disabled"
+            ],
             "default": "open",
             "description": "Group chat policy: open (anyone), allowlist (groupAllowFrom only), disabled"
           },
           "groupAllowFrom": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "List of allowed email addresses that can interact in groups. If not set, all users are allowed"
           },
           "sendReadReceipts": {
