@@ -351,13 +351,13 @@ function resolveAccountFromConfig(
     chatmailServer: (dc.chatmailServer as string) ?? "nine.testrun.org",
     customChatmailRelay,
     enabled: (dc.enabled as boolean) ?? true,
-    dmPolicy: (dc.dmPolicy as ResolvedAccount["dmPolicy"]) ?? "open",
+    dmPolicy: (dc.dmPolicy as ResolvedAccount["dmPolicy"]) ?? "pairing",
     allowFrom: dc.allowFrom as string[] | undefined,
     groupPolicy: (dc.groupPolicy as ResolvedAccount["groupPolicy"]) ?? "open",
     groupAllowFrom: dc.groupAllowFrom as string[] | undefined,
     sendReadReceipts: (dc.sendReadReceipts as boolean) ?? true,
     configWrites: (dc.configWrites as boolean) ?? false,
-    requireMention: (dc.requireMention as boolean) ?? false,
+    requireMention: (dc.requireMention as boolean) ?? true,
   };
 }
 
