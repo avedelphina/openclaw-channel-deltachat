@@ -2,7 +2,7 @@
   "id": "deltachat",
   "name": "Delta Chat",
   "description": "OpenClaw channel plugin for Delta Chat messaging. Requires the deltachat-rpc-server binary on PATH.",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "channels": [
     "deltachat"
   ],
