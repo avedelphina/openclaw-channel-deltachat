@@ -15,6 +15,14 @@ const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const version = pkg.version;
 const today = new Date().toISOString().slice(0, 10);
 
+// Sync version in openclaw.plugin.json if it exists
+const pluginJsonPath = "openclaw.plugin.json";
+if (fs.existsSync(pluginJsonPath)) {
+  const pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, "utf8"));
+  pluginJson.version = version;
+  fs.writeFileSync(pluginJsonPath, JSON.stringify(pluginJson, null, 2) + "\n");
+}
+
 let changelog = fs.readFileSync("CHANGELOG.md", "utf8");
 if (!changelog.includes("## [Unreleased]")) {
   console.error("CHANGELOG.md is missing an [Unreleased] section.");
@@ -27,7 +35,7 @@ changelog = changelog.replace(
 );
 fs.writeFileSync("CHANGELOG.md", changelog);
 
-execSync("git add package.json CHANGELOG.md", { stdio: "inherit" });
+execSync("git add package.json CHANGELOG.md openclaw.plugin.json", { stdio: "inherit" });
 execSync(`git commit -m "chore(release): v${version}"`, { stdio: "inherit" });
 execSync(`git tag v${version}`, { stdio: "inherit" });
 execSync("git push", { stdio: "inherit" });

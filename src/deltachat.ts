@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { mkdir, access } from "node:fs/promises";
@@ -9,6 +9,8 @@ import {
   type DcEvent,
 } from "@deltachat/jsonrpc-client";
 import type { DeltaChatConfig } from "./types.js";
+import { getSpawn } from "./rpc-spawner.js";
+import { fetchAccountCredentials } from "./chatmail-relay.js";
 
 export type SessionKey =
   | { type: "dm"; email: string }
@@ -63,6 +65,7 @@ export class DeltaChatClient {
     const dataDir = this.resolveDataDir();
     await mkdir(dataDir, { recursive: true, mode: 0o700 });
 
+    const spawn = await getSpawn();
     this.server = spawn(this.config.rpcServerPath, [], {
       // security: shell disabled to prevent command injection
       shell: false,
@@ -523,25 +526,7 @@ export class DeltaChatClient {
 
     try {
       // Fetch account credentials from the custom relay
-      const response = await fetch(accountUrl.toString(), {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `Custom chatmail relay returned ${response.status}: ${errorText}`,
-        );
-      }
-
-      const data = (await response.json()) as {
-        email?: string;
-        password?: string;
-        error?: string;
-      };
+      const data = await fetchAccountCredentials(accountUrl.toString());
 
       if (data.error) {
         throw new Error(`Custom chatmail relay error: ${data.error}`);

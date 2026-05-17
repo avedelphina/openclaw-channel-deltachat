@@ -2,7 +2,7 @@
   "id": "deltachat",
   "name": "Delta Chat",
   "description": "OpenClaw channel plugin for Delta Chat messaging. Requires the deltachat-rpc-server binary on PATH.",
-  "version": "0.1.12",
+  "version": "0.1.19",
   "channels": ["deltachat"],
   "configSchema": {
     "type": "object",
@@ -73,13 +73,13 @@
           },
           "requireMention": {
             "type": "boolean",
-            "default": false,
+            "default": true,
             "description": "Require the bot to be mentioned (@botname) in group chats to respond"
           },
           "dmPolicy": {
             "type": "string",
             "enum": ["open", "allowlist", "pairing", "disabled"],
-            "default": "open",
+            "default": "pairing",
             "description": "Direct message policy: open (anyone), allowlist (allowFrom only), pairing (verified contacts), disabled"
           },
           "groupPolicy": {
