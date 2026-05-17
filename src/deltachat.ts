@@ -154,8 +154,8 @@ export class DeltaChatClient {
         try {
           const msg = await this.dc.rpc.getMessage(this.accountId, msgId);
 
-          // Skip system/info messages and self-sent messages
-          if (msg.isInfo || msg.fromId === C.DC_CONTACT_ID_SELF) {
+          // Skip self-sent messages
+          if (msg.fromId === C.DC_CONTACT_ID_SELF) {
             await this.dc.rpc.markseenMsgs(this.accountId, [msgId]);
             return;
           }
@@ -167,7 +167,9 @@ export class DeltaChatClient {
 
           // Mark as seen immediately so the user knows the bot is alive,
           // even if the AI reply takes a while to generate.
-          if (this.config.sendReadReceipts !== false) {
+          // Info messages are always marked as seen; regular messages follow
+          // the sendReadReceipts config.
+          if (msg.isInfo || this.config.sendReadReceipts !== false) {
             await this.dc.rpc.markseenMsgs(this.accountId, [msgId]);
           }
 

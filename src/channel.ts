@@ -629,6 +629,20 @@ export function createDeltaChatChannel() {
           async (msg: T.Message, chat: T.FullChat) => {
             if (shouldSkipChat(chat.chatType)) return;
 
+            // Info messages (e.g., "Alice added you to the group") should not
+            // trigger AI replies, but we still need to auto-accept or leave
+            // group contact requests so the bot handles invites correctly.
+            if (msg.isInfo) {
+              if (chat.chatType === "Group" && chat.isContactRequest) {
+                if (account.groupPolicy === "disabled") {
+                  await currentClient.leaveGroup(msg.chatId);
+                } else {
+                  await currentClient.acceptChat(msg.chatId);
+                }
+              }
+              return;
+            }
+
             const senderEmail = await currentClient.getContactEmail(msg.fromId);
             log.info(
               `Incoming message from ${senderEmail}: "${msg.text.slice(0, 50)}"`,

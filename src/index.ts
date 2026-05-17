@@ -105,9 +105,17 @@ export default function register(api: OpenClawAPI): void {
       }
 
       const url = req.url ?? "";
+      // Normalize path: strip query string, then derive the path relative to
+      // the /deltachat/groups prefix so the handler works whether the gateway
+      // passes full URLs or prefix-stripped URLs.
+      const urlPath = url.split("?")[0]!;
+      const path = urlPath.startsWith("/deltachat/groups")
+        ? urlPath.slice("/deltachat/groups".length)
+        : urlPath;
+      const normalizedPath = path.replace(/\/+$/, "") || "/";
 
       // POST /deltachat/groups -> create group
-      if (req.method === "POST" && url === "/deltachat/groups") {
+      if (req.method === "POST" && normalizedPath === "/") {
         const MAX_BODY_SIZE = 1_048_576;
         let body = "";
         for await (const chunk of req) {
@@ -154,8 +162,8 @@ export default function register(api: OpenClawAPI): void {
       }
 
       // GET /deltachat/groups/:groupId/invite -> get invite
-      const match = url.match(
-        /^\/deltachat\/groups\/([^\/]+)\/invite(?:\/(qr\.svg|link))?$/,
+      const match = normalizedPath.match(
+        /^\/([^\/]+)\/invite(?:\/(qr\.svg|link))?$/,
       );
       if (match && req.method === "GET") {
         const groupId = parseInt(match[1]!, 10);
