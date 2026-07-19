@@ -43,7 +43,7 @@ Delta Chat Client  <-->  Email (IMAP/SMTP)  <-->  deltachat-rpc-server
 | Language | TypeScript 5.5+ |
 | Module System | ES Modules (`"type": "module"`) |
 | Target | ES2022 |
-| Testing | Vitest 2.0+ |
+| Testing | Vitest 4.1+ |
 | Delta Chat Integration | `@deltachat/jsonrpc-client` |
 | External Binary | `deltachat-rpc-server` (Rust binary) |
 
@@ -389,7 +389,7 @@ Because chatmail addresses are auto-generated, the plugin supports **verified gr
 
 ### Development
 - `typescript`: ^5.5.0 — TypeScript compiler
-- `vitest`: ^2.0.0 — Test runner
+- `vitest`: ^4.1.10 — Test runner
 - `@types/node`: ^22.0.0 — Node.js type definitions
 
 ### Peer
