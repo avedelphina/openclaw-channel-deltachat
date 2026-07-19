@@ -57,7 +57,7 @@ Or from source:
 
 ```bash
 git clone https://github.com/avedelphina/openclaw-channel-deltachat.git
-cd deltaclaw
+cd openclaw-channel-deltachat
 npm install && npm run build
 openclaw plugins install -l .
 ```
@@ -254,6 +254,24 @@ Group invite endpoints:
 - `GET /deltachat/groups/:groupId/invite/link` — Plain text invite link
 
 If someone adds the bot to an existing group, the bot enforces `groupPolicy` before joining. Unauthorized additions are automatically declined by leaving the group.
+
+## Companion X/Twitter Workflows
+
+Use this channel for private Delta Chat conversations, then add [TweetClaw](https://github.com/Xquik-dev/tweetclaw) when the same OpenClaw agent also needs X/Twitter tools.
+
+```bash
+export XQUIK_API_KEY="xq_your_key"
+openclaw plugins install clawhub:@xquik/tweetclaw
+openclaw config set plugins.entries.tweetclaw.config.apiKey "$XQUIK_API_KEY"
+openclaw config set tools.alsoAllow '["explore", "tweetclaw"]'
+```
+
+Use `openclaw plugins install npm:@xquik/tweetclaw` when the ClawHub package is unavailable. TweetClaw adds `explore` and `tweetclaw` tool surfaces for X data workflows through Xquik.
+
+Keep the Xquik API key in local OpenClaw config. Do not paste credentials into Delta Chat messages or shared group chats.
+
+Xquik is an independent third-party service. Not affiliated with X Corp.
+"Twitter" and "X" are trademarks of X Corp.
 
 ## How It Works
 
